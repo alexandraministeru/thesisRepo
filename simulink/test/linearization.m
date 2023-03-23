@@ -1,9 +1,3 @@
-% make sure the OpenFAST directory where the FAST_SFunc.mex* file is located
-% is in the MATLAB path (also make sure any other OpenFAST library files that
-% are needed are on the MATLAB path)
-%    (relative path names are not recommended in addpath()):
-% addpath('../../../build/bin'); % install location for Windows Visual Studio builds
-% addpath(genpath('../../../install')); % cmake default install location
 %% Clear environment
 clearvars;clc
 
@@ -22,7 +16,7 @@ if strcmp(templateDir, filesep)
 end
 
 %% Read and setup path of new subfiles
-% Read template FST file 
+% Read template FST file
 FP = FAST2Matlab(oldFSTName, 2); %FP are the FST parameters, specify 2 lines of header
 
 % Path and basename for modified files
@@ -37,7 +31,7 @@ filenameIW  = [base     '_IW.dat']             ; % New InflowWind file relative 
 fullPathHydroDyn  = [fullBase '_HydroDyn.dat']             ; % New HydroDyn file
 filenameHydroDyn  = [base     '_HydroDyn.dat']             ; % New HydroDyn file relative to new fst file
 
-reduceDOF = 0;
+reduceDOF = 1;
 if reduceDOF == 1
     % New ElastoDyn file
     fullPathElastoDyn  = [fullBase '_ElastoDyn.dat']             ; % New ElastoDyn file
@@ -69,13 +63,13 @@ Matlab2FAST(paramHydroDyn_mod, templateFilenameHydroDyn, fullPathHydroDyn, 2); %
 if reduceDOF == 1
     % Read the ElastoDyn file
     [paramElastoDyn, templateFilenameElastoDyn] = GetFASTPar_Subfile(FP, 'EDFile', templateDir, templateDir);
-
+    
     % Modify parameters - exclude some degrees of freedom
-    paramElastoDyn_mod = SetFASTPar(paramElastoDyn    ,'FlapDOF2', 'False');
-    paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'DrTrDOF', 'False');
-    paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'TwFADOF2', 'False');
-    paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'TwSSDOF2', 'False');
-
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn    , 'FlapDOF2', 'False');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod, 'DrTrDOF' , 'False');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod, 'TwFADOF2', 'False');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod, 'TwSSDOF2', 'False');
+    
     % Write the new ElastoDyn file
     Matlab2FAST(paramElastoDyn_mod, templateFilenameElastoDyn, fullPathElastoDyn, 2);
 end
@@ -96,15 +90,14 @@ if reduceDOF == 1
 end
 
 %% Set simulation time
-TMax = 300; % seconds
-FP_mod = SetFASTPar(FP,'TMax',TMax); % Linearization
+TMax = 500; % seconds
+FP_mod = SetFASTPar(FP_mod,'TMax',TMax);
 
 %% Write FST file
 Matlab2FAST(FP_mod, oldFSTName, newFSTName, 2); %contains 2 header lines
 
 %% Run without linearization - get a steady state to linearize around
 % Paste lines 68-end of the original HydroDyn file to the modified one (also starting at line 68)
-% addpath(genpath('D:/Master/TUD/Y2/Thesis/matlab/simulink/examples')); 
 FAST_InputFileName = newFSTName;
 sim('OpenLoop.mdl',[0,TMax]);
 
@@ -130,40 +123,43 @@ timeWindow = 60;
 ssWindowIdx = 60*timeStep;
 
 % Average over timeWindow s.t transient neglected (%OR set simulation time 10^4 seconds OR set wind steps)
-OoPDefl = getSSMean(OutData, ssWindowIdx, 12);
-IPDefl = getSSMean(OutData, ssWindowIdx, 13);
-BlPitch1 = getSSMean(OutData, ssWindowIdx, 5);
-BlPitch2 = getSSMean(OutData, ssWindowIdx, 6);
-BlPitch3 = getSSMean(OutData, ssWindowIdx, 7);
-Azimuth = getSSMean(OutData, ssWindowIdx, 8);
-RotSpeed = getSSMean(OutData, ssWindowIdx, 9);
-NacYaw = getSSMean(OutData, ssWindowIdx, 11);
-TTDspFA = getSSMean(OutData, ssWindowIdx, 27);
-TTDspSS = getSSMean(OutData, ssWindowIdx, 28);
-PtfmSurge  = getSSMean(OutData, ssWindowIdx, 30);
-PtfmSway = getSSMean(OutData, ssWindowIdx, 31);
-PtfmHeave = getSSMean(OutData, ssWindowIdx, 32);
-PtfmRoll = getSSMean(OutData, ssWindowIdx, 33);
-PtfmPitch = getSSMean(OutData, ssWindowIdx, 34);
-PtfmYaw = getSSMean(OutData, ssWindowIdx, 35);
+outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Modified8.SFunc.out';
+[data, channels, ~, ~] = ReadFASTtext(outFile);
+
+OoPDefl     = getSSMean(data, ssWindowIdx, channels, 'OoPDefl1');
+IPDefl      = getSSMean(data, ssWindowIdx, channels, 'IPDefl1');
+BlPitch1    = getSSMean(data, ssWindowIdx, channels, 'BldPitch1');
+BlPitch2    = getSSMean(data, ssWindowIdx, channels, 'BldPitch2');
+BlPitch3    = getSSMean(data, ssWindowIdx, channels, 'BldPitch3');
+Azimuth     = getSSMean(data, ssWindowIdx, channels, 'Azimuth');
+RotSpeed    = getSSMean(data, ssWindowIdx, channels, 'RotSpeed');
+NacYaw      = getSSMean(data, ssWindowIdx, channels, 'NacYaw');
+TTDspFA     = getSSMean(data, ssWindowIdx, channels, 'TTDspFA');
+TTDspSS     = getSSMean(data, ssWindowIdx, channels, 'TTDspSS');
+PtfmSurge   = getSSMean(data, ssWindowIdx, channels, 'PtfmSurge');
+PtfmSway    = getSSMean(data, ssWindowIdx, channels, 'PtfmSway');
+PtfmHeave   = getSSMean(data, ssWindowIdx, channels, 'PtfmHeave');
+PtfmRoll    = getSSMean(data, ssWindowIdx, channels, 'PtfmRoll');
+PtfmPitch   = getSSMean(data, ssWindowIdx, channels, 'PtfmPitch');
+PtfmYaw     = getSSMean(data, ssWindowIdx, channels, 'PtfmYaw');
 
 % Set initial conditions in EDFile
 paramElastoDyn_mod = SetFASTPar(paramElastoDyn    ,'OoPDefl'   , OoPDefl);
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'IPDefl'    , IPDefl); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(1)', BlPitch1); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(2)', BlPitch2); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(3)', BlPitch3); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'Azimuth'   , Azimuth); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'RotSpeed'  , RotSpeed); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'NacYaw'    , NacYaw); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'TTDspFA'   , TTDspFA); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'TTDspSS'   , TTDspSS); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSurge' , PtfmSurge); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSway'  , PtfmSway); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmHeave' , PtfmHeave); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmRoll'  , PtfmRoll); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmPitch' , PtfmPitch); 
-paramElastodyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmYaw'   , PtfmYaw); 
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'IPDefl'    , IPDefl);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(1)', BlPitch1);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(2)', BlPitch2);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'BlPitch(3)', BlPitch3);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'Azimuth'   , Azimuth);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'RotSpeed'  , RotSpeed);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'NacYaw'    , NacYaw);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TTDspFA'   , TTDspFA);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TTDspSS'   , TTDspSS);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSurge' , PtfmSurge);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSway'  , PtfmSway);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmHeave' , PtfmHeave);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmRoll'  , PtfmRoll);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmPitch' , PtfmPitch);
+paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmYaw'   , PtfmYaw);
 
 % Write the new ElastoDyn file
 Matlab2FAST(paramElastoDyn_mod, templateFilenameElastoDyn, fullPathElastoDyn, 2);
@@ -208,19 +204,22 @@ paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl',0);
 Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
 
 %% Write parameters in .fst file
-% Linearization
 FP_mod = SetFASTPar(FP,'Linearize','True'); % Linearization
+FP_mod = SetFASTPar(FP_mod,'NLinTimes',1); 
+FP_mod = SetFASTPar(FP_mod,'LinTimes',100); 
 
 % Change the path of subfiles to point to the newly created ones
 FP_mod = SetFASTPar(FP_mod,'EDFile',['"' filenameElastoDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'AeroFile',['"' filenameAeroDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'HydroFile',['"' filenameHydroDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'ServoFile',['"' filenameServoDyn '"']);
+FP_mod = SetFASTPar(FP_mod,'InflowFile',['"' filenameIW '"']);
 
 % Write FST file
 Matlab2FAST(FP_mod, oldFSTName, newFSTName, 2);
 
 %% Run simulation with linearization on
+TMax = 200;
 FAST_InputFileName = newFSTName;
 sim('OpenLoop.mdl',[0,TMax]);
 
@@ -232,7 +231,7 @@ PlotFASToutput(outFile,[],[],plotChannels,1)
 [data, channels, units, headers] = ReadFASTtext(outFile);
 % disp('Available channels:')
 % disp(channels)
-% 
+%
 % % Plot list of selected channels
 % nPlots = length(plotChannels);
 % time = data(:,1);
@@ -247,7 +246,7 @@ PlotFASToutput(outFile,[],[],plotChannels,1)
 % end
 
 %% Simulate linearization
-linFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Modified8_2.SFunc.2.lin';
+linFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Modified8_2.SFunc.1.lin';
 linData = ReadFASTLinear(linFile);
 sys = ss(linData.A, linData.B, linData.C, linData.D);
 
