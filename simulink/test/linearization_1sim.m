@@ -101,7 +101,11 @@ filenameServoDyn  = [base     '_ServoDyn.dat']             ; % New ServoDyn file
 % For linearization
 paramServoDyn_mod = SetFASTPar(paramServoDyn      ,'PCMode'  ,0);
 paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'YCMode'  ,0);
-paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl',0);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl',1);
+% Following params taken from definition of NREL 5MW
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_Rgn2K' ,0.0255764);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtGnSp',1173.7);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtTq'  ,43093.55);
 
 % Write the new ServoDyn file
 Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
@@ -111,6 +115,7 @@ Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
 FP_mod = SetFASTPar(FP,'Linearize','True'); % Linearization on
 FP_mod = SetFASTPar(FP_mod,'NLinTimes',1); 
 FP_mod = SetFASTPar(FP_mod,'LinTimes',950); 
+% FP_mod = SetFASTPar(FP_mod,'LinInputs',2); 
 
 % Change the path of subfiles to point to the newly created ones
 FP_mod = SetFASTPar(FP_mod,'InflowFile',['"' filenameIW '"']);
@@ -202,6 +207,17 @@ outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr/5MW_OC3Spar_DLL_WTurb_WavesIrr_ModL
 plotChannels = {'RotSpeed','GenSpeed','BldPitch1'};
 [data, channels, units, headers] = ReadFASTtext(outFile);
 
+timeSamples = length(data);
+timeStep = (timeSamples - 1)/TMax;
+timeWindow = 60;
+ssWindowIdx = 60*timeStep;
+
+nChannels = length(channels);
+opVal = zeros(nChannels,1);
+for idxCh=2:nChannels
+    opVal(idxCh) = getSSMean(data, ssWindowIdx, channels, channels{idxCh});
+end
+
 % Plot list of selected channels
 nPlots = length(plotChannels);
 time = data(:,1);
@@ -212,9 +228,11 @@ for ip = 1:nPlots
     figure()
     plot(time, data(:,id))
     hold on
-    plot(time, Y(:,idLin))
+    plot(time, Y(:,idLin)+opVal(id)) % add back operating point value
     xlabel('Time (s)')
     ylabel([channels{id} ' ' units{id}])
     legend('Original','Linearized','Location','SouthEast')
     grid on
 end
+
+save('lin8mps.mat', 'linFile', 'linData', 'opVal')

@@ -60,7 +60,7 @@ paramHydroDyn_mod = SetFASTPar(paramHydroDyn_mod  ,'RdtnMod'  ,0);
 Matlab2FAST(paramHydroDyn_mod, templateFilenameHydroDyn, fullPathHydroDyn, 2); %contains 2 header lines
 
 %% Read and modify ElastoDyn
-reduceDOF = 0;
+reduceDOF = 1;
 if reduceDOF == 1
     % New ElastoDyn file
     fullPathElastoDyn  = [fullBase '_ElastoDyn.dat']             ; % New ElastoDyn file
@@ -99,9 +99,13 @@ filenameServoDyn  = [base     '_ServoDyn.dat']             ; % New ServoDyn file
 [paramServoDyn, templateFilenameServoDyn] = GetFASTPar_Subfile(FP, 'ServoFile', templateDir, templateDir);
 
 % For linearization
-paramServoDyn_mod = SetFASTPar(paramServoDyn      ,'PCMode'  ,0);
-paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'YCMode'  ,0);
-paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl',0);
+paramServoDyn_mod = SetFASTPar(paramServoDyn      ,'PCMode'   ,0);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'YCMode'   ,0);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl' ,1);
+% Following params taken from definition of NREL 5MW
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_Rgn2K' ,0.0255764);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtGnSp',1173.7);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtTq'  ,43093.55);
 
 % Write the new ServoDyn file
 Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
@@ -217,7 +221,7 @@ FAST_InputFileName = newFSTName;
 sim('OpenLoop.mdl',[0,TMax]);
 
 %% Plot nonlinear model output
-outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Modified8.SFunc.out';
+outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Modified8_2.SFunc.out';
 plotChannels = {'RotSpeed','GenSpeed','BldPitch1','GenTq','GenPwr'};
 PlotFASToutput(outFile,[],[],plotChannels,1)
 [data, channels, ~, ~] = ReadFASTtext(outFile);
