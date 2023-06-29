@@ -1,6 +1,6 @@
 function [u,y,sys_d] = getIOData(Ts)
 %getIOData(Ts) Function used to define a mass-spring-damper 2nd order system
-%and get IO open-loop data sampled with sampling period Ts
+%and get IO open-loop data sampled with sampling period Ts.
 %
 % Input arguments
 %----------------

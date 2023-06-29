@@ -12,7 +12,7 @@ addpath(genpath('..\matlab-toolbox'));
 addpath(genpath('..\matlab-toolbox\Utilities'));
 addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi'));
 import casadi.*
-
+rng('default')
 %% Plot nonlinear model outputs
 % outFile = '..\forLin\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 % plotChannels = {'RotSpeed','GenSpeed','BldPitch1'};
@@ -109,9 +109,13 @@ sys_d = c2d(LTIsys_reduced,Ts);
 % Time vector
 t = 0:Ts:50;
 
-% PRBS input for persistency of excitation
-u_bladePitch = idinput(length(t),'PRBS',[0 1/10],[-0.2 0.2]); % in degrees
-u_bladePitch = u_bladePitch*(pi/180); % in radians
+% % Generate PRBS input for persistency of excitation
+% u_bladePitch = idinput(length(t),'PRBS',[0 1/10],[-0.2 0.2]); % in degrees
+% u_bladePitch = u_bladePitch*(pi/180); % in radians
+% save('peinput.mat','u_bladePitch');
+
+% Load input from file
+load('peinput.mat')
 u_windSpeed = zeros(size(u_bladePitch));
 
 u = [u_windSpeed u_bladePitch];
@@ -135,9 +139,9 @@ elseif strcmp(noiseAns,'y')
     noiseFlag = 1;
 end
 
-variance = 0.1;
-variance = variance*noiseFlag;
-y = y + variance.*randn(size(y));
+std = 0.1;
+std = std*noiseFlag;
+y = y + std.*randn(size(y));
 
 figure
 plot(t,y);
@@ -189,8 +193,8 @@ out = zeros(kFinal,1); % HARDCODED OUTPUT SIZE
 
 %% Simulate/add wind disturbance
 v = zeros(kFinal,1);
-% % Step in incoming wind speed
-% v(100:end) = 1;
+% Step in incoming wind speed
+v(100:end) = 1;
 
 % Turbulent wind obtained from previous simulation
 % load('turbWind_16mps.mat')
@@ -202,6 +206,10 @@ uini = constructHankelMat(u_bladePitch,i+N-p,p,1);
 yini = constructHankelMat(y,i+N-p,p,1);
 
 % Define weights
+% IV:
+% Q = 5e-4*eye(f);
+% R = eye(f);
+
 Q = 1e2*eye(f);
 R = eye(f);
 
@@ -234,7 +242,7 @@ for k=1:kFinal
     
     % Apply optimal input, simulate output
     x(:,k+1) = sys_d.A*x(:,k) + sys_d.B*u;
-    out(k) = sys_d.C*x(:,k) + sys_d.D*u + variance.*randn(1);
+    out(k) = sys_d.C*x(:,k) + sys_d.D*u + std.*randn(1);
     
     % Update past data with most recent I/O data
     uini = [uini(2:end); uStar];

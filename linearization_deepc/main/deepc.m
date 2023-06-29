@@ -1,6 +1,6 @@
 function uOpt = deepc(data,uini,yini,N,p,f,rf,Q,R,method,ivFlag)
 %deepc(Up,Uf,Yp,Yf,uini,yini,N,p,f,rf,Q,R,method) Function used to compute
-%the DeePC optimal input using either fmincon or quadprog.
+%the DeePC optimal input.
 %
 % Input arguments
 %----------------
@@ -87,7 +87,7 @@ if ivFlag == 0 % no IV
 
         z = full(output.x);
     end
-    g = z(1:Nbar);
+    % g = z(1:Nbar);
     uf = z(Nbar+1:end);
 
 else % with IV

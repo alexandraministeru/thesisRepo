@@ -1,9 +1,17 @@
 clearvars;clc;close all;
 addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi'));
 import casadi.*
+rng('default')
 %% Get I/O open-loop data
+% Sampling time
 Ts = 0.1;
-[u,y,sys_d] = getIOData(Ts);
+
+% % Generate data
+% [u,y,sys_d] = getIOData(Ts);
+% save('iodata.mat','u','y','sys_d');
+
+% Load data from file
+load('iodata.mat')
 
 % Add noise on output
 noiseAns = input('Add noise? y/n[n]: ','s');
@@ -13,9 +21,9 @@ elseif strcmp(noiseAns,'y')
     noiseFlag = 1;
 end
 
-variance = 0.01;
-variance = variance*noiseFlag;
-y = y + variance.*randn(size(y));
+std = 0.01;
+std = std*noiseFlag;
+y = y + std.*randn(size(y));
 
 %% DeePC parameters
 N = 200; % lenght of data set
@@ -81,12 +89,12 @@ for k=1:kFinal
     rf = ref(k:k+f-1);    
 
     % DeePC optimal control input
-    uStar = deepcFunc(data,uini,yini,N,p,f,rf,Q,R,method,ivFlag);
+    uStar = deepc(data,uini,yini,N,p,f,rf,Q,R,method,ivFlag);
     uSeq(k) = uStar;
 
     % Apply optimal input, simulate output including additive white noise
     x(:,k+1) = sys_d.A*x(:,k) + sys_d.B.*uStar;
-    out(k) = sys_d.C*x(:,k) + sys_d.D.*uStar + variance*randn(size(out(k)));
+    out(k) = sys_d.C*x(:,k) + sys_d.D.*uStar + std*randn(size(out(k)));
 
     % Update past data with most recent I/O data
     uini = [uini(2:end); uStar];
