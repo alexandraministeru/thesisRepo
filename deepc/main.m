@@ -1,5 +1,5 @@
 clearvars;clc;close all;
-addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi'));
+addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi')); % full path to casadi lib
 import casadi.*
 rng('default')
 %% Get I/O open-loop data
@@ -14,11 +14,11 @@ Ts = 0.1;
 load('iodata.mat')
 
 % Add noise on output
-noiseAns = input('Add noise? y/n[n]: ','s');
-if isempty(noiseAns) || strcmp(noiseAns,'n')
-    noiseFlag = 0;
-elseif strcmp(noiseAns,'y')
+noiseAns = input('Add measurement noise? y/n[y]: ','s');
+if isempty(noiseAns) || strcmp(noiseAns,'y')
     noiseFlag = 1;
+elseif strcmp(noiseAns,'n')
+    noiseFlag = 0;
 end
 
 std = 0.01;
@@ -42,6 +42,14 @@ data.Uf = constructHankelMat(u,i+p,f,Nbar);
 data.Yf = constructHankelMat(y,i+p,f,Nbar);
 
 %% Solve the constrained optimization problem
+% Use instrumental variables
+ivAns = input('Use instrumental variables? y/n[y]: ','s');
+if isempty(ivAns) || strcmp(ivAns,'y')
+    ivFlag = 1;
+elseif strcmp(ivAns,'n')
+    ivFlag = 0;
+end
+
 % Define control weights:
 %
 % weightOutputs diagonal matrix of size l-by-l, where l is the number of 
@@ -71,7 +79,7 @@ nStates = size(sys_d.A,1);
 nInputs = size(sys_d.B,2);
 nOutputs = size(sys_d.C,1);
 
-% Generate reference trajectory - modify for MIMO
+% Generate reference trajectory
 ref = zeros(kFinal+f,1);
 ref(70:end) = 1;
 
@@ -96,16 +104,7 @@ uSeq = zeros(nInputs,kFinal);
 
 % Choose optimization method
 method = input(['Optimization method: 1-fmincon+SQP, 2-quadprog, ' ...
-    '3-casadi+nlp, 4-casadi+QP: ']);
-
-% Use instrumental variables
-ivAns = input('Use instrumental variables? y/n[n]: ','s');
-if isempty(ivAns) || strcmp(ivAns,'n')
-    ivFlag = 0;
-elseif strcmp(ivAns,'y')
-    ivFlag = 1;
-end
-
+    '3-casadi+nlp: ']);
 tic
 % Control loop
 for k=1:kFinal
@@ -139,10 +138,10 @@ grid on
 hold on
 % Reference
 plot(tsim,ref(1:kFinal))
+xline(f*Ts,'r--','Future window size')
 xlabel('Time (in s)')
 ylabel('Displacement (in m)')
 legend('Controlled output','Reference','Location','SouthEast')
-xline(f*Ts,'r--','Future window size')
 set(gcf,'Color','White')
 
 % Control input

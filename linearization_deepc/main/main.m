@@ -2,17 +2,26 @@
 % and collective blade pitch angle, outputs: generator speed) from a WT
 % linearization, gets I/O open-loop data, and closes the control loop with
 % a DeePC controller. Only the blade pitch angle is considered a
-% controllled input, while the horizontal wind speed is a disturbance.
+% controllled input, while the horizontal wind speed is a disturbance. The
+% following parameters can be set during run time:
+%
+% 1. noiseFlag - selects whether or not measurement noise is added to the
+% output of the system
+% 2. previewFlag - selects whether or not preview disturbance information
+% is provided to DeePC
+% 3. ivFlag - selects whether or not instrumental variables are used within
+% DeePC
 
 %% Clean environment
 clearvars;clc;close all;
+rng('default')
 
 %% Set paths
 addpath(genpath('..\matlab-toolbox'));
 addpath(genpath('..\matlab-toolbox\Utilities'));
-addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi'));
+% Insert full path to casadi lib
+addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi')); 
 import casadi.*
-rng('default')
 
 %% Load linearization
 % My linearization
@@ -21,11 +30,15 @@ rng('default')
 % [LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
 % cd ..\main
 
-% LTIsys from Amr
-FilePath = "..\fromAmr\5MW_OC3Spar_DLL_WTurb_WavesIrr_16mps";
-MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
-[LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
-cd ..\..\main
+% % LTIsys from Amr
+% FilePath = "..\fromAmr\5MW_OC3Spar_DLL_WTurb_WavesIrr_16mps";
+% MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
+% [LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
+% cd ..\..\main
+% 
+% save('linData.mat','VTK','FAST_linData','LTIsys','matData','MBC');
+
+load('inputData\linData.mat');
 
 %% Find index of blade pitch, gen speed and wind speed
 inputChannelsList = MBC.DescCntrlInpt;
@@ -66,7 +79,7 @@ LTIsys_reduced = ss(MBC.AvgA,B_reduced,C_reduced,D_reduced);
 
 %% Discretize and get OL data
 % Discretize system
-Ts = 0.05;
+Ts = 0.05; % sampling period (in s)
 
 % sys = ss(G_theta_wg);
 % sys_d = c2d(sys,Ts);
@@ -77,23 +90,23 @@ sys_d = c2d(LTIsys_reduced,Ts);
 t = 0:Ts:50;
 
 % % Generate PRBS input for persistency of excitation
-% u_bladePitch = idinput(length(t),'PRBS',[0 1/10],[-2 2]); % in degrees
-% u_bladePitch = u_bladePitch*(pi/180); % in radians
+u_bladePitch = idinput(length(t),'PRBS',[0 1/10],[-2 2]); % in degrees
+u_bladePitch = u_bladePitch*(pi/180); % in radians
 % 
 % % Generate horizontal wind speed disturbance input
-% windData = 0.5.*randn(3000,1);
-% u_windSpeed = windData(1:size(u_bladePitch,1));
+windData = 0.5.*randn(3000,1);
+u_windSpeed = windData(1:size(u_bladePitch,1));
 % 
 % % Save input to file
-% save('peinput.mat','u_bladePitch','u_windSpeed','windData');
+% save('inputData\peinput.mat','u_bladePitch','u_windSpeed','windData');
 
 % Load input from file
-load('peinput.mat')
+% load('inputData\peinput.mat')
 
 % % Can replace wind disturbance:
 % u_windSpeed = zeros(size(u_bladePitch)); % no wind disturbance
 % % or
-% load('turbWind_16mps.mat') %turbulent wind obtained from previous simulation
+% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
 % u_windSpeed = windData(1:size(u_bladePitch,1));
 % u_windSpeed = u_windSpeed-16; % around linearization point
 
@@ -193,14 +206,14 @@ else
 end
 
 %% Set up control loop
-kFinal = 200; % simulation steps
+kFinal = 300; % simulation steps
 tsim = 0:Ts:Ts*(kFinal-1);
 nInputs = size(data.Up,1)/p;
 nOutputs = size(data.Yp,1)/p;
 
 % Generate reference trajectory
 ref = zeros(kFinal+f,1);
-ref(150:end) = 100; % step in reference
+ref(200:end) = 100; % step in reference
 % %MIMO:
 % ref_y1 = zeros(kFinal+f,1)';
 % ref_y2 = zeros(kFinal+f,1)';
@@ -235,30 +248,6 @@ else
     data.wini = [];
 end
 
-% Define control weights:
-%
-% weightOutputs diagonal matrix of size l-by-l, where l is the number of 
-% output channels and the n-th element on the diagonal represents the 
-% weight for the corresponding n-th output
-
-weightOutputs = 5e-5*diag(1); % IV
-% weightOutputs = 1e2*diag(1); % no IV
-controlParams.Q = kron(eye(f),weightOutputs);
-
-% weightInputs diagonal matrix of size m-by-m, where m is the number of 
-% input channels and the n-th element on the diagonal represents the weight
-% for the corresponding n-th input
-weightInputs= diag(1); 
-controlParams.R = kron(eye(f),weightInputs);
-
-% Choose input bounds
-controlParams.lbu = -10*(pi/180);
-controlParams.ubu = 10*(pi/180);
-
-% Choose optimization method
-method = input(['Optimization methyod: 1-fmincon+SQP, 2-quadprog, ' ...
-    '3-casadi+nlp: ']);
-
 % Use instrumental variables
 ivAns = input('Use instrumental variables? y/n[y]: ','s');
 
@@ -273,6 +262,32 @@ if isempty(ivAns) || strcmp(ivAns,'y')
 elseif strcmp(ivAns,'n')
     ivFlag = 0;
 end
+
+% Define control weights:
+%
+% weightOutputs diagonal matrix of size l-by-l, where l is the number of 
+% output channels and the n-th element on the diagonal represents the 
+% weight for the corresponding n-th output
+
+if ivFlag == 1    
+    weightOutputs = 5e-3*diag(1);
+else
+    weightOutputs = 1e4*diag(1);
+end
+controlParams.Q = kron(eye(f),weightOutputs);
+
+% weightInputs diagonal matrix of size m-by-m, where m is the number of 
+% input channels and the n-th element on the diagonal represents the weight
+% for the corresponding n-th input
+weightInputs= diag(1); 
+controlParams.R = kron(eye(f),weightInputs);
+
+% Choose input bounds
+controlParams.lbu = -10*(pi/180);
+controlParams.ubu = 10*(pi/180);
+
+% Choose optimization method
+method = input(['Optimization methyod: 1-quadprog, ' '2-casadi+nlp: ']);
 
 % Control loop
 for k=1:kFinal
@@ -309,11 +324,9 @@ for k=1:kFinal
 end
 
 %% Plotting
-% load('output_casadiIV_noPreview.mat')
-% load('output_casadiIV_preview.mat')
+stepIdxs = find(ref);
 
-stepIdxs = find(ref ~= 0);
-
+% Controlled output
 figure
 plot(tsim,out)
 xlabel('Time (in s)')
@@ -341,3 +354,4 @@ title('Control input')
 grid on
 set(gcf,'Color','White')
 
+% plotCompare
