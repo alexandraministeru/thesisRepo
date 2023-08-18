@@ -180,13 +180,13 @@ previewAns = input('Use preview information? y/n[n]: ','s');
 while not(isempty(previewAns)) && not(strcmp(previewAns,'y')) && ...
         not(strcmp(previewAns,'n'))    
     disp('Invalid input.')
-    previewAns = input('Use preview information? y/n[n]: ','s');
+    previewAns = input('Use preview information? y/n[y]: ','s');
 end
 
-if isempty(previewAns) || strcmp(previewAns,'n')
-    previewFlag = 0;
-elseif strcmp(previewAns,'y')
+if isempty(previewAns) || strcmp(previewAns,'y')
     previewFlag = 1;
+elseif strcmp(previewAns,'n')
+    previewFlag = 0;
 end
 
 % Past data
@@ -214,6 +214,7 @@ nOutputs = size(data.Yp,1)/p;
 % Generate reference trajectory
 ref = zeros(kFinal+f,1);
 ref(200:end) = 100; % step in reference
+
 % %MIMO:
 % ref_y1 = zeros(kFinal+f,1)';
 % ref_y2 = zeros(kFinal+f,1)';
@@ -287,7 +288,7 @@ controlParams.lbu = -10*(pi/180);
 controlParams.ubu = 10*(pi/180);
 
 % Choose optimization method
-method = input(['Optimization methyod: 1-quadprog, ' '2-casadi+nlp: ']);
+method = input(['Optimization method: 1-quadprog, ' '2-casadi+nlp: ']);
 
 % Control loop
 for k=1:kFinal
