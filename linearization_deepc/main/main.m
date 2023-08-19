@@ -175,7 +175,7 @@ controlParams.f = f;
 
 %% Construct data matrices
 % Use preview information
-previewAns = input('Use preview information? y/n[n]: ','s');
+previewAns = input('Use preview information? y/n[y]: ','s');
 
 while not(isempty(previewAns)) && not(strcmp(previewAns,'y')) && ...
         not(strcmp(previewAns,'n'))    
