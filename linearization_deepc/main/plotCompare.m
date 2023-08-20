@@ -3,7 +3,7 @@ load('outputData\uRateConstr_quadprog_np.mat')
 out1 = out;
 uSeq1 = uSeq;
 
-load('outputData\uRateConstr_quadprogIP.mat')
+load('outputData\uRateConstr_quadprog_wp.mat')
 out2 = out;
 uSeq2 = uSeq;
 
