@@ -1,9 +1,9 @@
 %% Plotting
-load('outputData\wDist_wNoise_wIV_casadi_nP_2.mat')
+load('outputData\uRateConstr_quadprog_np.mat')
 out1 = out;
 uSeq1 = uSeq;
 
-load('outputData\wDist_wNoise_wIV_casadi_wP_2.mat')
+load('outputData\uRateConstr_quadprogIP.mat')
 out2 = out;
 uSeq2 = uSeq;
 

@@ -287,6 +287,11 @@ controlParams.R = kron(eye(f),weightInputs);
 controlParams.lbu = -10*(pi/180);
 controlParams.ubu = 10*(pi/180);
 
+% Input rate constraint
+duDeg = 8; % deg/s
+duRad = 8*(pi/180); % rad/s
+controlParams.duf = duRad*Ts;
+
 % Choose optimization method
 method = input(['Optimization method: 1-quadprog, ' '2-casadi+nlp: ']);
 
@@ -343,7 +348,7 @@ set(gcf,'Color','White')
 
 % Control input sequence
 figure
-plot(tsim,uSeq*(180/pi))
+plot(tsim,rad2deg(uSeq))
 xlabel('Time (in s)')
 ylabel('\theta_c (in deg)')
 ylim([-15 15])
@@ -354,5 +359,19 @@ xline(Ts*stepIdxs(1),'k--','Reference step')
 title('Control input')
 grid on
 set(gcf,'Color','White')
+
+% Control input rate
+figure
+plot(tsim(1:end-1),diff(rad2deg(uSeq))*(1/Ts))
+xlabel('Time (in s)')
+ylabel('\theta_c rate (in deg/s)')
+yline(8,'r--','LineWidth',1)
+yline(-8,'r--','LineWidth',1)
+xline(Ts*f,'k--','Future window size')
+ylim([-15 15])
+title('Control input rate')
+grid on
+set(gcf,'Color','White')
+
 
 % plotCompare

@@ -104,11 +104,23 @@ if method == 1 % quadprog
             wini;
             wf];
     end
+
+    % Inequality constraints: A*z <= b
+
+    [A,b] = getInputRateConstr(nInputs,f,controlParams.duf);
+    Aineq = [zeros(size(A,1),length(g)) A;
+         zeros(size(A,1),length(g)) -A];
+     
+    bineq = [b(1) + data.uini(end);
+            b(2:end);
+            b(1) - data.uini(end);
+            b(2:end)];   
     
     n = length(z0);
     z = optimvar('z',n,'LowerBound',lbu,'UpperBound',ubu);
 
-    constr = Aeq*z == beq;
+    constr.eq = Aeq*z == beq;
+    constr.ineq = Aineq*z <= bineq;
 
     objFcn = (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
         z(length(g)+1:end)'*R*z(length(g)+1:end);
@@ -133,10 +145,21 @@ elseif method == 2 % casadi + NLP
     end
 
     q = Aeq*g - beq;
-    cost = (Yf*Z'*g-rf)'*Q*(Yf*Z'*g-rf) + uf'*R*uf;
 
     lbq = zeros(length(q),1);
     ubq = zeros(length(q),1);
+
+    % Input rate constraints
+    [A,b] = getInputRateConstr(nInputs,f,controlParams.duf);
+    q = [q;
+         A*uf];    
+    
+    lbq = [lbq; 
+            -b(1) + data.uini(end);
+            -b(2:end)];
+    ubq = [ubq; 
+            b(1) + data.uini(end);
+            b(2:end)];
 
     % Bounds on input: lbu <= u <= ubu
     lbu = -inf(size(z));
@@ -146,6 +169,8 @@ elseif method == 2 % casadi + NLP
         controlParams.lbu);
     ubu(length(g)+1:length(g)+length(uf)) = kron(ones(f,1), ...
         controlParams.ubu);
+
+    cost = (Yf*Z'*g-rf)'*Q*(Yf*Z'*g-rf) + uf'*R*uf;
 
     prob = struct('f', cost, 'x', z, 'g', q);
     solver = casadi.nlpsol('solver', 'ipopt', prob);
