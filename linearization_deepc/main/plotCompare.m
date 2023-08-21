@@ -1,9 +1,9 @@
 %% Plotting
-load('outputData\uRateConstr_quadprog_np.mat')
+load('outputData\eog_np.mat')
 out1 = out;
 uSeq1 = uSeq;
 
-load('outputData\uRateConstr_quadprog_wp.mat')
+load('outputData\eog_wp.mat')
 out2 = out;
 uSeq2 = uSeq;
 
@@ -20,7 +20,7 @@ grid on
 hold on
 plot(tsim,ref(1:kFinal)) % reference
 xline(Ts*f,'k--','Future window size')
-xline(Ts*stepIdxs(1),'k--','Reference step')
+% xline(Ts*stepIdxs(1),'k--','Reference step')
 legend('No preview','With preview','Reference','Location','SouthEast')
 set(gcf,'Color','White')
 
@@ -35,7 +35,7 @@ ylim([-15 15])
 yline(-10,'r--','LineWidth',1)
 yline(10,'r--','LineWidth',1)
 xline(Ts*f,'k--','Future window size')
-xline(Ts*stepIdxs(1),'k--','Reference step')
+% xline(Ts*stepIdxs(1),'k--','Reference step')
 title('Control input')
 legend('No preview','With preview','Reference','Location','SouthEast')
 grid on

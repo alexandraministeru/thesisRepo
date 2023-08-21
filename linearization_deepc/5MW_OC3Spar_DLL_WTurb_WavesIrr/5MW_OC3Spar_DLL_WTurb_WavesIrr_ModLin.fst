@@ -3,12 +3,12 @@ FAST Certification Test #24: NREL 5.0 MW Baseline Wind Turbine with OC3 Hywind C
 ---------------------- SIMULATION CONTROL --------------------------------------
 True          Echo            - Echo input data to <RootName>.ech (flag)
 "FATAL"       AbortLevel      - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
-       5000   TMax            - Total run time (s)
+        150   TMax            - Total run time (s)
        0.05   DT              - Recommended module time step (s)
           1   InterpOrder     - Interpolation order for input/output time history (-) {1=linear, 2=quadratic}
           0   NumCrctn        - Number of correction iterations (-) {0=explicit calculation, i.e., no corrections}
         1.5   DT_UJac         - Time between calls to get Jacobians (s)
-      1E+06   UJacSclFact     - Scaling factor used in Jacobians (-)
+    1000000   UJacSclFact     - Scaling factor used in Jacobians (-)
 ---------------------- FEATURE SWITCHES AND FLAGS ------------------------------
           1   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades}
           1   CompInflow      - Compute inflow wind velocities (switch) {0=still air; 1=InflowWind; 2=external from OpenFOAM}
@@ -51,7 +51,7 @@ True          SumPrint        - Print summary data to "<RootName>.sum" (flag)
 True          TabDelim        - Use tab delimiters in text tabular output file? (flag) {uses spaces if false}
 "ES15.7E2"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
 ---------------------- LINEARIZATION -------------------------------------------
-True          Linearize       - Linearization analysis (flag)
+False         Linearize       - Linearization analysis (flag)
 True          CalcSteady      - Calculate a steady-state periodic operating point before linearization? [unused if Linearize=False] (flag)
           3   TrimCase        - Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] (-)
       0.001   TrimTol         - Tolerance for the rotational speed convergence [used only if CalcSteady=True] (-)
@@ -60,7 +60,7 @@ True          CalcSteady      - Calculate a steady-state periodic operating poin
           0   Bld_Kdmp        - Damping factor for the blades [used only if CalcSteady=True] (N/(m/s))
          36   NLinTimes       - Number of times to linearize (-) [>=1] [unused if Linearize=False]
          30,         60    LinTimes        - List of times at which to linearize (s) [1 to NLinTimes] [used only when Linearize=True and CalcSteady=False]
-          1   LinInputs       - Inputs included in linearization (switch) {0=none; 1=standard; 2=all module inputs (debug)} [unused if Linearize=False]
+          2   LinInputs       - Inputs included in linearization (switch) {0=none; 1=standard; 2=all module inputs (debug)} [unused if Linearize=False]
           1   LinOutputs      - Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False]
 False         LinOutJac       - Include full Jacobians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2]
 False         LinOutMod       - Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]

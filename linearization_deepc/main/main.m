@@ -206,14 +206,14 @@ else
 end
 
 %% Set up control loop
-kFinal = 300; % simulation steps
+kFinal = 600; % simulation steps
 tsim = 0:Ts:Ts*(kFinal-1);
 nInputs = size(data.Up,1)/p;
 nOutputs = size(data.Yp,1)/p;
 
 % Generate reference trajectory
 ref = zeros(kFinal+f,1);
-ref(200:end) = 100; % step in reference
+% ref(200:end) = 100; % step in reference
 
 % %MIMO:
 % ref_y1 = zeros(kFinal+f,1)';
@@ -235,8 +235,18 @@ uSeq = zeros(nInputs,kFinal);
 out = zeros(nOutputs,kFinal);
 
 %% Wind disturbance for CL
-v = windData(size(u_windSpeed,1)+1:end); 
+% No wind disturbance
 % v = zeros(kFinal+f,1);
+
+% White noise
+% v = windData(size(u_windSpeed,1)+1:end); 
+
+% Extreme operating gust
+load('inputData\eog_16mps.mat','Wind1VelX','Time')
+
+v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
+v = v-16; % center around linearization point
+v = [v;zeros(f,1)];
 
 %% Solve the constrained optimization problem
 % Past data for prediction
@@ -342,7 +352,7 @@ grid on
 hold on
 plot(tsim,ref(1:kFinal)) % reference
 xline(Ts*f,'k--','Future window size')
-xline(Ts*stepIdxs(1),'k--','Reference step')
+% xline(Ts*stepIdxs(1),'k--','Reference step')
 legend('Controlled output','Reference','Location','SouthEast')
 set(gcf,'Color','White')
 
@@ -355,7 +365,7 @@ ylim([-15 15])
 yline(-10,'r--','LineWidth',1)
 yline(10,'r--','LineWidth',1)
 xline(Ts*f,'k--','Future window size')
-xline(Ts*stepIdxs(1),'k--','Reference step')
+% xline(Ts*stepIdxs(1),'k--','Reference step')
 title('Control input')
 grid on
 set(gcf,'Color','White')

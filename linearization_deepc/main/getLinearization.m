@@ -163,7 +163,7 @@ FP_mod = SetFASTPar(FP_mod,'DT',0.05);
 FP_mod = SetFASTPar(FP_mod,'DT_Out',0.05);
 FP_mod = SetFASTPar(FP_mod,'TrimGain',0.001);
 FP_mod = SetFASTPar(FP_mod,'TrimCase',3);
-% FP_mod = SetFASTPar(FP_mod,'LinInputs',2);
+FP_mod = SetFASTPar(FP_mod,'LinInputs',2);
 
 % Change the path of subfiles to point to the newly created ones
 FP_mod = SetFASTPar(FP_mod,'InflowFile',['"' filenameIW '"']);
@@ -173,7 +173,7 @@ FP_mod = SetFASTPar(FP_mod,'AeroFile',['"' filenameAeroDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'ServoFile',['"' filenameServoDyn '"']);
 
 %% Set simulation time
-TMax = 5000; % seconds
+TMax = 150; % seconds
 FP_mod = SetFASTPar(FP_mod,'TMax',TMax);
 
 %% Write FST file
@@ -289,3 +289,10 @@ for ip = 1:nPlots
     legend('Original','Linearized','Location','SouthEast')
     grid on
 end
+
+%% Load linearization
+
+FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
+MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
+[LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
+cd ..\main
