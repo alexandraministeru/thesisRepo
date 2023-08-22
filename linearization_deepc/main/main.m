@@ -105,10 +105,6 @@ u_windSpeed = windData(1:size(u_bladePitch,1));
 
 % % Can replace wind disturbance:
 % u_windSpeed = zeros(size(u_bladePitch)); % no wind disturbance
-% % or
-% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
-% u_windSpeed = windData(1:size(u_bladePitch,1));
-% u_windSpeed = u_windSpeed-16; % around linearization point
 
 u = [u_windSpeed u_bladePitch];
 
@@ -243,10 +239,14 @@ out = zeros(nOutputs,kFinal);
 
 % Extreme operating gust
 load('inputData\eog_16mps.mat','Wind1VelX','Time')
-
 v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
 v = v-16; % center around linearization point
 v = [v;zeros(f,1)];
+
+% Turbulent wind
+% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
+% v = windData;
+% v = v-16; % center around linearization point
 
 %% Solve the constrained optimization problem
 % Past data for prediction
