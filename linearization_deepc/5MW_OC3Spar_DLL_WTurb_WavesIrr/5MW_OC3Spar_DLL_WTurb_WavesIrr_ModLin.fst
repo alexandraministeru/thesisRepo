@@ -3,7 +3,7 @@ FAST Certification Test #24: NREL 5.0 MW Baseline Wind Turbine with OC3 Hywind C
 ---------------------- SIMULATION CONTROL --------------------------------------
 True          Echo            - Echo input data to <RootName>.ech (flag)
 "FATAL"       AbortLevel      - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
-        150   TMax            - Total run time (s)
+       2000   TMax            - Total run time (s)
        0.05   DT              - Recommended module time step (s)
           1   InterpOrder     - Interpolation order for input/output time history (-) {1=linear, 2=quadratic}
           0   NumCrctn        - Number of correction iterations (-) {0=explicit calculation, i.e., no corrections}
@@ -51,7 +51,7 @@ True          SumPrint        - Print summary data to "<RootName>.sum" (flag)
 True          TabDelim        - Use tab delimiters in text tabular output file? (flag) {uses spaces if false}
 "ES15.7E2"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
 ---------------------- LINEARIZATION -------------------------------------------
-False         Linearize       - Linearization analysis (flag)
+True          Linearize       - Linearization analysis (flag)
 True          CalcSteady      - Calculate a steady-state periodic operating point before linearization? [unused if Linearize=False] (flag)
           3   TrimCase        - Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] (-)
       0.001   TrimTol         - Tolerance for the rotational speed convergence [used only if CalcSteady=True] (-)

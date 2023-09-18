@@ -36,9 +36,10 @@ import casadi.*
 % [LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
 % cd ..\..\main
 % 
-% save('linData.mat','VTK','FAST_linData','LTIsys','matData','MBC');
+% save('inputData\linData.mat','VTK','FAST_linData','LTIsys','matData','MBC');
 
-load('inputData\linData.mat');
+% load('inputData\linData.mat');
+load('inputData\linDataWave.mat');
 
 %% Find index of blade pitch, gen speed and wind speed
 inputChannelsList = MBC.DescCntrlInpt;
@@ -238,15 +239,15 @@ out = zeros(nOutputs,kFinal);
 % v = windData(size(u_windSpeed,1)+1:end); 
 
 % Extreme operating gust
-load('inputData\eog_16mps.mat','Wind1VelX','Time')
-v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
-v = v-16; % center around linearization point
-v = [v;zeros(f,1)];
+% load('inputData\eog_16mps.mat','Wind1VelX','Time')
+% v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
+% v = v-16; % center around linearization point
+% v = [v;zeros(f,1)];
 
 % Turbulent wind
-% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
-% v = windData;
-% v = v-16; % center around linearization point
+load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
+v = windData;
+v = v-16; % center around linearization point
 
 %% Solve the constrained optimization problem
 % Past data for prediction
@@ -380,6 +381,15 @@ yline(-8,'r--','LineWidth',1)
 xline(Ts*f,'k--','Future window size')
 ylim([-15 15])
 title('Control input rate')
+grid on
+set(gcf,'Color','White')
+
+% Wind disturbance
+figure
+plot(tsim,v(1:length(tsim)))
+xlabel('Time (in s)')
+ylabel('Wind speed (in m/s)')
+title('Horizontal wind speed around 16mps linearization point')
 grid on
 set(gcf,'Color','White')
 

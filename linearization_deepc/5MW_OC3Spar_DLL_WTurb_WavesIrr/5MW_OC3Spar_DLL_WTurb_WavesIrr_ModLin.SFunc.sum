@@ -1,7 +1,7 @@
 
 FAST Summary File
 
-Predictions were generated on 20-Aug-2023 at 21:03:42 using OpenFAST, compiled as a DLL S-Function for Simulink as a 64-bit application using single precision at commit v3.4.0
+Predictions were generated on 12-Sep-2023 at 21:26:29 using OpenFAST, compiled as a DLL S-Function for Simulink as a 64-bit application using single precision at commit v3.4.0
   compiled with
     NWTC Subroutine Library
     ElastoDyn

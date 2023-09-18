@@ -20,7 +20,7 @@ False         WrACT           - Output coherent turbulence time steps in AeroDyn
          31   NumGrid_Y       - Horizontal grid-point matrix dimension
        0.05   TimeStep        - Time step [seconds]
         630   AnalysisTime    - Length of analysis time series [seconds] (program will add time if necessary: AnalysisTime = MAX(AnalysisTime, UsableTime+GridWidth/MeanHHWS) )
-        100   UsableTime      - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds unless UsableTime is "ALL")
+       3000   UsableTime      - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds unless UsableTime is "ALL")
          90   HubHt           - Hub height [m] (should be > 0.5*GridHeight)
         145   GridHeight      - Grid height [m]
         145   GridWidth       - Grid width [m] (should be >= 2*(RotorRadius+ShaftLength))

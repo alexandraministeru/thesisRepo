@@ -1,8 +1,9 @@
 % This script sets parameters for linearization, runs a long simulation, 
-% reaches a steady state and then linearizes around that steady
+% reaches a steady state and then linearizes 36 times around that steady
 % state.
 %% Clear environment
 clearvars;clc;close all;
+rng('default')
 
 %% Set matlab-toolbox path
 addpath(genpath('..\matlab-toolbox'));
@@ -88,16 +89,17 @@ if reduceDOF == 1
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'EdgeDOF', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TeetDOF', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'DrTrDOF', 'False');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'GenDOF', 'True');%
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'YawDOF', 'False');
-    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TwFADOF1', 'True');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TwFADOF1', 'True');%
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TwFADOF2', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TwSSDOF1', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'TwSSDOF2', 'False');
-    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSgDOF', 'True');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSgDOF', 'True');%
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmSwDOF', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmHvDOF', 'False');
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmRDOF', 'False');
-    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmPDOF', 'True');
+    paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmPDOF', 'True');%
     paramElastoDyn_mod = SetFASTPar(paramElastoDyn_mod,'PtfmYDOF', 'False');
 end
 
@@ -143,13 +145,16 @@ filenameServoDyn  = [base     '_ServoDyn.dat']             ; % New ServoDyn file
 [paramServoDyn, templateFilenameServoDyn] = GetFASTPar_Subfile(FP, 'ServoFile', templateDir, templateDir);
 
 % For linearization
-paramServoDyn_mod = SetFASTPar(paramServoDyn      ,'PCMode'  ,0);
+paramServoDyn_mod = SetFASTPar(paramServoDyn      ,'PCMode',  0);
 paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'YCMode'  ,0);
 paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VSContrl',1);
 % Following params taken from definition of NREL 5MW
-paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_Rgn2K' ,0.0255764);
-paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtGnSp',1173.7);
+% paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_Rgn2K' ,0.0255764);
+% paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtGnSp',1173.7);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtGnSp',9999.9E-9);
 paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_RtTq'  ,43093.55);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_Rgn2K' ,9999.9E-9);
+paramServoDyn_mod = SetFASTPar(paramServoDyn_mod  ,'VS_SlPc' ,9999.9E-9);
 
 % Write the new ServoDyn file
 Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
@@ -157,7 +162,7 @@ Matlab2FAST(paramServoDyn_mod, templateFilenameServoDyn, fullPathServoDyn, 2);
 %% Extract data from the FST file and modify it
 % Set a given parameter in the FST file
 FP_mod = SetFASTPar(FP,'Linearize','True'); % Linearization on
-FP_mod = SetFASTPar(FP_mod,'CalcSteady','True'); % Linearization on
+FP_mod = SetFASTPar(FP_mod,'CalcSteady','True');
 FP_mod = SetFASTPar(FP_mod,'NLinTimes',36);
 FP_mod = SetFASTPar(FP_mod,'DT',0.05);
 FP_mod = SetFASTPar(FP_mod,'DT_Out',0.05);
@@ -173,7 +178,7 @@ FP_mod = SetFASTPar(FP_mod,'AeroFile',['"' filenameAeroDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'ServoFile',['"' filenameServoDyn '"']);
 
 %% Set simulation time
-TMax = 150; % seconds
+TMax = 2000; % seconds
 FP_mod = SetFASTPar(FP_mod,'TMax',TMax);
 
 %% Write FST file
@@ -184,115 +189,7 @@ fclose('all');
 FAST_InputFileName = newFSTName;
 sim('OpenLoop.mdl',[0,TMax]);
 
-%% Turbulent wind data
-% windTime = OutData(:,1);
-% windData = OutData(:,2);
-
 %% Plot nonlinear model output
 outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.out';
-plotChannels = {'RotSpeed','GenSpeed','BldPitch1','GenTq','GenPwr'};
+plotChannels = {'RotSpeed','GenSpeed','BldPitch1','GenTq','GenPwr','PtfmPitch'};
 PlotFASToutput(outFile,[],[],plotChannels,1)
-
-[data, channels, ~, ~] = ReadFASTtext(outFile);
-
-% % Plot list of selected channels
-% nPlots = length(plotChannels);
-% time = data(:,1);
-% figure()
-% for ip = 1:nPlots
-%     % Find index of plot channel within data
-%     id = find(ismember(channels,plotChannels{ip}));
-%     subplot(nPlots, 1, ip);
-%     plot(time, data(:,id))
-%     xlabel('Time (s)')
-%     ylabel([channels{id} ' ' units{id}])
-% end
-
-%% Simulate linearization
-FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
-MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\fromAmr\matlab-toolbox-main";
-[sys, MBC, matData, linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
-
-% linFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.1.lin';
-% linData = ReadFASTLinear(linFile);
-% sys = ss(linData.A, linData.B, linData.C, linData.D);
-
-% Time vector
-T = data(1:end,1);
-
-% Construct input matrix
-[~,inputs] = size(sys.B);
-U = zeros(inputs,length(T));
-
-% Horizontal wind speed
-idx = find(ismember(channels,'Wind1VelX'));
-U(1,:) = data(1:end,idx); %#ok<FNDSB>
-
-% Generator torque
-idx = find(ismember(channels,'GenTq'));
-U(8,:) = data(1:end,idx); %#ok<FNDSB>
-
-% Collective blade pitch - uses BldPitch1 (assumes all blades received the same command)
-idx = find(ismember(channels,'BldPitch1'));
-U(9,:) = data(1:end,idx);
-
-% Extract initial condition
-initState = cell2mat(linData.x_op);
-
-% Simulate system
-Y = lsim(sys,U,T,initState);
-
-%% Plot linear model output
-channelsLin = linData.y_desc;
-plotChannelsLin = {'ED RotSpeed, (rpm)','ED GenSpeed, (rpm)','ED BldPitch1, (deg)'};
-
-nPlots = length(plotChannelsLin);
-for i=1:nPlots
-    idx = find(ismember(channelsLin,plotChannelsLin{i}));
-    figure()
-    plot(T,Y(:,idx))
-    grid on
-    title(plotChannelsLin{i})
-end
-
-%% Validation
-outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr/5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.out';
-plotChannels = {'RotSpeed','GenSpeed','BldPitch1'};
-[data, channels, units, headers] = ReadFASTtext(outFile);
-channelsLin = linData.y_desc;
-plotChannelsLin = {'ED RotSpeed, (rpm)','ED GenSpeed, (rpm)','ED BldPitch1, (deg)'};
-
-timeSamples = length(data);
-timeStep = (timeSamples - 1)/TMax;
-timeWindow = 60;
-ssWindowIdx = 60*timeStep;
-
-nChannels = length(channels);
-opVal = zeros(nChannels,1);
-for idxCh=2:nChannels
-    opVal(idxCh) = getSSMean(data, ssWindowIdx, channels, channels{idxCh});
-end
-
-% Plot list of selected channels
-nPlots = length(plotChannels);
-time = data(:,1);
-for ip = 1:nPlots
-    % Find index of plot channel within data
-    id = find(ismember(channels,plotChannels{ip}));
-    idLin = find(ismember(channelsLin,plotChannelsLin{ip}));
-    figure()
-    plot(time, data(:,id))
-    hold on
-    plot(time, Y(:,idLin)+opVal(id)) % add back operating point value
-    xlabel('Time (s)')
-    ylabel([channels{id} ' ' units{id}])
-    legend('Original','Linearized','Location','SouthEast')
-    grid on
-end
-
-%% Load linearization
-
-FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
-MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
-[LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
-cd ..\main
