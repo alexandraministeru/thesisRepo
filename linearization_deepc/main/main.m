@@ -207,6 +207,9 @@ kFinal = 600; % simulation steps
 tsim = 0:Ts:Ts*(kFinal-1);
 nInputs = size(data.Up,1)/p;
 nOutputs = size(data.Yp,1)/p;
+if previewFlag == 1
+    nDist = size(data.Wp,1)/p;
+end
 
 % Generate reference trajectory
 ref = zeros(kFinal+f,1);
@@ -239,21 +242,20 @@ out = zeros(nOutputs,kFinal);
 % v = windData(size(u_windSpeed,1)+1:end); 
 
 % Extreme operating gust
-% load('inputData\eog_16mps.mat','Wind1VelX','Time')
-% v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
-% v = v-16; % center around linearization point
-% v = [v;zeros(f,1)];
+load('inputData\eog_16mps.mat','Wind1VelX','Time')
+v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
+v = v-16; % center around linearization point
+v = [v;zeros(f,1)];
 
 % Turbulent wind
-load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
-v = windData;
-v = v-16; % center around linearization point
+% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
+% v = windData;
+% v = v-16; % center around linearization point
 
 %% Solve the constrained optimization problem
 % Past data for prediction
 data.uini = constructHankelMat(u_bladePitch,i+N-p,p,1);
 data.yini = constructHankelMat(y,i+N-p,p,1);
-
 if previewFlag == 1
     data.wini = constructHankelMat(u_windSpeed,i+N-p,p,1);
 else
@@ -336,7 +338,7 @@ for k=1:kFinal
     data.uini = [data.uini(nInputs+1:end); uStar];
     data.yini = [data.yini(nOutputs+1:end); out(:,k)];
     if previewFlag == 1
-        data.wini = [data.wini(nOutputs+1:end); v(k)];
+        data.wini = [data.wini(nDist+1:end); v(k)];
     end
 end
 
