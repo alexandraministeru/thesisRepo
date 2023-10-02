@@ -1,17 +1,4 @@
-% This script obtains a reduced state-space (inputs: horizontal wind speed
-% and collective blade pitch angle, outputs: generator speed) from a WT
-% linearization, gets I/O open-loop data, and closes the control loop with
-% a DeePC controller. Only the blade pitch angle is considered a
-% controllled input, while the horizontal wind speed is a disturbance. The
-% following parameters can be set during run time:
-%
-% 1. noiseFlag - selects whether or not measurement noise is added to the
-% output of the system
-% 2. previewFlag - selects whether or not preview disturbance information
-% is provided to DeePC
-% 3. ivFlag - selects whether or not instrumental variables are used within
-% DeePC
-
+% DeePC with wave forces preview.
 %% Clean environment
 clearvars;clc;close all;
 rng('default')
@@ -19,96 +6,89 @@ rng('default')
 %% Set paths
 addpath(genpath('..\matlab-toolbox'));
 addpath(genpath('..\matlab-toolbox\Utilities'));
+addpath(genpath('functions'))
 % Insert full path to casadi lib
 addpath(genpath('D:\Program Files\MATLAB\R2023a\casadi')); 
 import casadi.*
+% YALMIP and solvers
+addpath(genpath('D:\Program Files\mosek\10.1\toolbox\r2017aom')) %MOSEK
+addpath(genpath('D:\Program Files\MATLAB\R2023a\sedumi')) % sedumi
+addpath(genpath('D:\Program Files\MATLAB\R2023a\sdpt3')) % sdpt3
+addpath(genpath('D:\Program Files\MATLAB\R2023a\yalmip')) % yalmip
+
+%% Get preview data
+outFile = 'D:\Master\TUD\Y2\Thesis\matlab\fromAmr\FF_OpenFAST\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+[data, channels, units, headers] = ReadFASTtext(outFile);
+plotChannels = {'RotSpeed','GenSpeed','BldPitch1','GenTq','GenPwr','Wave1Elev','B1WvsFxi','B1WvsMyi'};
+PlotFASToutput(outFile,[],[],plotChannels,1)
+
+F_surge = data(:,ismember(channels,'B1WvsFxi'));
+M_pitch = data(:,ismember(channels,'B1WvsMyi'));
 
 %% Load linearization
-% My linearization
 % FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
 % MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
 % [LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
 % cd ..\main
+% save('inputData\linDataWave.mat','VTK','FAST_linData','LTIsys','matData','MBC');
 
-% % LTIsys from Amr
-% FilePath = "..\fromAmr\5MW_OC3Spar_DLL_WTurb_WavesIrr_16mps";
-% MtlbTlbxPath = "D:\Master\TUD\Y2\Thesis\matlab\repo\linearization_deepc\fromAmr\matlab-toolbox-main";
-% [LTIsys, MBC, matData, FAST_linData, VTK] = FASTLinearization(FilePath,MtlbTlbxPath);
-% cd ..\..\main
-% 
-% save('inputData\linData.mat','VTK','FAST_linData','LTIsys','matData','MBC');
-
-% load('inputData\linData.mat');
-load('inputData\linData.mat');
+load('inputData\linDataWave.mat');
 
 %% Find index of blade pitch, gen speed and wind speed
 inputChannelsList = MBC.DescCntrlInpt;
 outputChannelsList = MBC.DescOutput;
 
-inputChannels = {'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s',...
-    'ED Extended input: collective blade-pitch command, rad'};
+inputChannels = {'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s',...     
+    'ED Extended input: collective blade-pitch command, rad', ...
+    'ED Platform X force, node 1, N', ...
+    'ED Platform Y moment, node 1, Nm'};
+    % %, ... 
+    %'ED Platform Y moment, node 1, Nm'};  
+
 outputChannels = {'ED GenSpeed, (rpm)'};
-% outputChannels = {'ED RotSpeed, (rpm)'};
+    %,'ED RotSpeed, (rpm)', ...
+    % 'HD B1WvsFxi, (N)', ...
+    % 'HD B1WvsMyi, (N-m)'};
 
-nIn = length(inputChannels);
-nOut = length(outputChannels);
-nStates = length(LTIsys.A);
+LTIsys_reduced = getReducedSS(MBC,LTIsys,inputChannels,outputChannels);
 
-B_reduced = zeros(nStates,nIn);
-C_reduced = zeros(nOut,nStates);
-D_temp = zeros(length(LTIsys.C),nIn);
-D_reduced = zeros(nOut,nIn);
-
-for idx = 1:nIn
-    % Find index of input channel
-    id = find(ismember(inputChannelsList,inputChannels{idx}));
-    B_reduced(:,idx) = MBC.AvgB(:,id);
-    D_temp(:,idx) = MBC.AvgD(:,id);
-end
-
-for idx = 1:nOut
-    % Find index of output channel
-    id = find(ismember(outputChannelsList,outputChannels{idx}));
-    C_reduced(idx,:) = MBC.AvgC(id,:);
-    D_reduced(idx,:) = D_temp(id,:);
-end
-
-LTIsys_reduced = ss(MBC.AvgA,B_reduced,C_reduced,D_reduced);
-
-%% Extract transfer functions
-% G_theta_wg = tf(LTIsys(11, 9)); % blade pitch (rad) to gen speed (rpm)
-% G_theta_v = tf(LTIsys(11, 1)); % wind speed (m/s) to gen speed (rpm)
+% save('inputData\waveLTIsys_reduced.mat','LTIsys_reduced');
+% load('inputData\waveLTIsys_reduced.mat')
 
 %% Discretize and get OL data
 % Discretize system
 Ts = 0.05; % sampling period (in s)
-
-% sys = ss(G_theta_wg);
-% sys_d = c2d(sys,Ts);
-
 sys_d = c2d(LTIsys_reduced,Ts);
 
 % Time vector
 t = 0:Ts:50;
 
-% % Generate PRBS input for persistency of excitation
+% Generate PRBS input for persistency of excitation
 u_bladePitch = idinput(length(t),'PRBS',[0 1/10],[-2 2]); % in degrees
 u_bladePitch = u_bladePitch*(pi/180); % in radians
-% 
+
+% % Wind input: setady wind
+% u_windSpeed = zeros(size(u_bladePitch));
+
 % % Generate horizontal wind speed disturbance input
 windData = 0.5.*randn(3000,1);
 u_windSpeed = windData(1:size(u_bladePitch,1));
-% 
+
+% Wave disturbance input: surge force, pitch moment
+% u_Fsg = F_surge(1:length(u_bladePitch));
+% u_Mp = M_pitch(1:length(u_bladePitch));
+
+u_Fsg = std(F_surge).*randn(length(t),1);
+u_Mp = std(M_pitch).*randn(length(t),1);
+
 % % Save input to file
-% save('inputData\peinput.mat','u_bladePitch','u_windSpeed','windData');
+% save('inputData\peinput.mat','u_bladePitch');
 
 % Load input from file
 % load('inputData\peinput.mat')
 
-% % Can replace wind disturbance:
-% u_windSpeed = zeros(size(u_bladePitch)); % no wind disturbance
-
-u = [u_windSpeed u_bladePitch];
+% u = [u_windSpeed u_bladePitch u_Fsg];
+u = [u_windSpeed u_bladePitch u_Fsg u_Mp];
 
 figure
 plot(t,u_bladePitch)
@@ -117,14 +97,22 @@ xlabel('Time (in s)')
 ylabel('Blade pitch angle (in rad)')
 title('PRBS input')
 set(gcf,'Color','White')
+% 
+% figure
+% plot(t,u_Fsg)
+% grid on
+% xlabel('Time (in s)')
+% ylabel('Wave forces in surge direction (in N)')
+% title('WvsFx')
+% set(gcf,'Color','White')
 
-figure
-plot(t,u_windSpeed)
-grid on
-xlabel('Time (in s)')
-ylabel('Horizontal wind speed (in m/s)')
-title('Disturbance')
-set(gcf,'Color','White')
+% figure
+% plot(t,u_Mp)
+% grid on
+% xlabel('Time (in s)')
+% ylabel('Wave pitch moment on platform (in N-m)')
+% title('WvsMy')
+% set(gcf,'Color','White')
 
 % Simulate system and get open-loop I/O data set
 y = lsim(sys_d,u,t); % zero initial condition, around linearization point
@@ -149,7 +137,7 @@ std = std*noiseFlag;
 y = y + std.*randn(size(y));
 
 figure
-plot(t,y);
+plot(t,y(:,1));
 grid on
 xlabel('Time (in s)')
 ylabel('Generator speed (in rpm)')
@@ -157,8 +145,8 @@ title('OL response to PE input - \omega_g around linearization point')
 set(gcf,'Color','White')
 
 % % Check if data is persistently exciting
-% data = iddata(y,u,Ts);
-% pexcit(data)
+data = iddata(y,u,Ts);
+pexcit(data)
 
 %% DeePC parameters
 N = 500; % lenght of data set
@@ -187,6 +175,8 @@ elseif strcmp(previewAns,'n')
     previewFlag = 0;
 end
 
+clear data
+
 % Past data
 data.Up = constructHankelMat(u_bladePitch,i,p,Nbar);
 data.Yp = constructHankelMat(y,i,p,Nbar);
@@ -195,22 +185,22 @@ data.Yp = constructHankelMat(y,i,p,Nbar);
 data.Uf = constructHankelMat(u_bladePitch,i+p,f,Nbar);
 data.Yf = constructHankelMat(y,i+p,f,Nbar);
 
+disturbMat = [u_Fsg u_Mp];
+
 if previewFlag == 1
-    data.Wp = constructHankelMat(u_windSpeed,i,p,Nbar); % past data
-    data.Wf = constructHankelMat(u_windSpeed,i+p,f,Nbar); % future data
+    data.Wp = constructHankelMat(disturbMat,i,p,Nbar); % past data
+    data.Wf = constructHankelMat(disturbMat,i+p,f,Nbar); % future data
 else
     data.Wp = [];
     data.Wf = [];
 end
 
 %% Set up control loop
-kFinal = 600; % simulation steps
+kFinal = 1000; % simulation steps
 tsim = 0:Ts:Ts*(kFinal-1);
 nInputs = size(data.Up,1)/p;
 nOutputs = size(data.Yp,1)/p;
-if previewFlag == 1
-    nDist = size(data.Wp,1)/p;
-end
+nDist = size(data.Wp,1)/p;
 
 % Generate reference trajectory
 ref = zeros(kFinal+f,1);
@@ -235,30 +225,33 @@ x(:,1) = x0;
 uSeq = zeros(nInputs,kFinal);
 out = zeros(nOutputs,kFinal);
 
-%% Wind disturbance for CL
-% No wind disturbance
-% v = zeros(kFinal+f,1);
-
-% White noise
-% v = windData(size(u_windSpeed,1)+1:end); 
-
-% Extreme operating gust
-load('inputData\eog_16mps.mat','Wind1VelX','Time')
-v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
-v = v-16; % center around linearization point
-v = [v;zeros(f,1)];
-
+%% CL disturbances
 % Turbulent wind
 % load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
 % v = windData;
 % v = v-16; % center around linearization point
 
+v = zeros(kFinal+f,1); % Steady wind
+
+% % Extreme operating gust
+% load('inputData\eog_16mps.mat','Wind1VelX','Time')
+% v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
+% v = v-16; % center around linearization point
+% v = [v;zeros(f,1)];
+
+% Fsg = F_surge(length(u_Fsg)+1:end); 
+% Mp = M_pitch(length(u_Mp)+1:end);
+
+Fsg = F_surge; 
+Mp = M_pitch;
+
 %% Solve the constrained optimization problem
 % Past data for prediction
 data.uini = constructHankelMat(u_bladePitch,i+N-p,p,1);
 data.yini = constructHankelMat(y,i+N-p,p,1);
+
 if previewFlag == 1
-    data.wini = constructHankelMat(u_windSpeed,i+N-p,p,1);
+    data.wini = constructHankelMat(disturbMat,i+N-p,p,1);
 else
     data.wini = [];
 end
@@ -285,16 +278,16 @@ end
 % weight for the corresponding n-th output
 
 if ivFlag == 1    
-    weightOutputs = 5e-3*diag(1);
+    weightOutputs = 1e-2*diag(1);
 else
-    weightOutputs = 1e4*diag(1);
+    weightOutputs = 1e2*diag(1);
 end
 controlParams.Q = kron(eye(f),weightOutputs);
 
 % weightInputs diagonal matrix of size m-by-m, where m is the number of 
 % input channels and the n-th element on the diagonal represents the weight
 % for the corresponding n-th input
-weightInputs= diag(1); 
+weightInputs= 1*diag(1); 
 controlParams.R = kron(eye(f),weightInputs);
 
 % Choose input bounds
@@ -310,7 +303,8 @@ controlParams.duf = duRad*Ts;
 method = input(['Optimization method: 1-quadprog, ' '2-casadi+nlp: ']);
 
 %% Control loop
-for k=1:kFinal
+tic
+for k=1:1000
     disp('Iteration: ')
     disp(k)
 
@@ -318,8 +312,10 @@ for k=1:kFinal
     rf = ref((k-1)*nOutputs+1:(k-1)*nOutputs+nOutputs*f);
 
     % Wind preview
-    if previewFlag == 1
-        data.wf = v(k:k+f-1);
+    if previewFlag == 1        
+        % data.wf = [Mp(k:k+f-1)];
+        previewData = [Fsg(k:k+f-1) Mp(k:k+f-1)];
+        data.wf = reshape(previewData',[],1);
     else
         data.wf = [];
     end
@@ -329,7 +325,9 @@ for k=1:kFinal
     uSeq(:,k) = uStar;
 
     u = [v(k);
-        uStar];
+        uStar;
+        Fsg(k);
+        Mp(k)];        
     
     % Apply optimal input, simulate output
     x(:,k+1) = sys_d.A*x(:,k) + sys_d.B*u;
@@ -339,9 +337,10 @@ for k=1:kFinal
     data.uini = [data.uini(nInputs+1:end); uStar];
     data.yini = [data.yini(nOutputs+1:end); out(:,k)];
     if previewFlag == 1
-        data.wini = [data.wini(nDist+1:end); v(k)];
+        data.wini = [data.wini(nDist+1:end); Fsg(k); Mp(k)];
     end
 end
+toc
 
 %% Plotting
 stepIdxs = find(ref);
@@ -387,15 +386,6 @@ title('Control input rate')
 grid on
 set(gcf,'Color','White')
 
-% Wind disturbance
-figure
-plot(tsim,v(1:length(tsim)))
-xlabel('Time (in s)')
-ylabel('Wind speed (in m/s)')
-title('Horizontal wind speed around 16mps linearization point')
-grid on
-set(gcf,'Color','White')
-
 %% Save data
 % |   simType   |  description  | optMethod | scaled |     tuning     |
 % |-------------|---------------|-----------|--------|----------------|
@@ -406,7 +396,7 @@ set(gcf,'Color','White')
 % |             | Fsg_Mp_preview|           |        |                |
 % ---------------------------------------------------------------------
 
-simType = 'wind';
+simType = 'wave';
 inName = '\theta_c (in deg)';
 outName = 'Generator speed (in rpm)';
 ext = '.mat';
@@ -473,5 +463,3 @@ else
     save(['outputData\' fileName ext],'inName','outName','tsim','ref','Ts','controlParams', 'out', ...
         'uSeq','description','scaledFlag');
 end
-
-
