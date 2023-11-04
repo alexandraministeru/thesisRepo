@@ -55,7 +55,7 @@ end
 % weightOutputs diagonal matrix of size l-by-l, where l is the number of 
 % output channels and the n-th element on the diagonal represents the 
 % weight for the corresponding n-th input
-weightOutputs = 5e3*diag(1); 
+weightOutputs = 5e3*diag(1);
 controlParams.Q = kron(eye(f),weightOutputs);
 
 % weightInputs diagonal matrix of size m-by-m, where m is the number of 
@@ -111,11 +111,18 @@ for k=1:kFinal
     disp('Iteration: ')
     disp(k)
 
+    data.uini = uini;
+    data.yini = yini;
+    controlParams.N = N;
+    controlParams.p = p;
+    controlParams.f = f;
+    controlParams.duf = 1000;
+
     % Reference trajectory
     rf = ref((k-1)*nOutputs+1:(k-1)*nOutputs+nOutputs*f);
 
     % DeePC optimal control input
-    uStar = deepc(data,uini,yini,N,p,f,rf,controlParams,method,ivFlag);
+    uStar = deepc(data,rf,controlParams,method,ivFlag,0);
     uSeq(:,k) = uStar;
 
     % Apply optimal input, simulate output including additive white noise

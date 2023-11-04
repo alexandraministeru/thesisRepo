@@ -16,8 +16,8 @@ function mat = constructHankelMat(data,i,s,Nbar)
 % mat     : resulting block-Hankel matrix.
 %==========================================================================
 
-data = data';
-[d,~] = size(data);
+data = data.';
+d = size(data,1);
 mat = zeros(s*d,Nbar);
 
 % construct first column

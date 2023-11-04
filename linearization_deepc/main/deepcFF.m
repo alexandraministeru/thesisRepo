@@ -1,4 +1,4 @@
-function uOpt = deepc(data,rf,controlParams,method,ivFlag,previewFlag)
+function [uOpt, yf1] = deepcFF(data,rf,controlParams,method,ivFlag,previewFlag)
 % deepc(data,rf,controlParams,method,ivFlag,previewFlag) Function used to
 % compute the DeePC optimal input.
 %
@@ -38,7 +38,7 @@ yini = data.yini;
 pIn = size(Up,1);
 pOut = size(Yp,1);
 fIn = size(Uf,1);
-% fOut = size(Yf,1);
+fOut = size(Yf,1);
 
 if previewFlag == 1
     Wp = data.Wp;
@@ -58,38 +58,41 @@ Nbar = N-p-f+1;
 
 % Number of I/O channels
 nInputs = pIn/p;
-% nOutputs = pOut/p;
+nOutputs = pOut/p;
 
 switch ivFlag
     case 0
         Z = eye(Nbar);
     case 1
         if previewFlag == 1
-            Z = [Up;Yp;Uf;Wp;Wf];
+            Z = [Up;Yp;Uf;Yf;Wp;Wf];
         else
-            Z = [Up;Yp;Uf];
+            Z = [Up;Yp;Uf;Yf];
         end
 end
 
-if method == 1 % quadprog
+if method == 1 || method == 2  % QP or SDP
     % Decision variables
     g = ones(size(Z,1),1);
-    uf = (pi/180)*ones(fIn,1);
-    z0 = [g; uf];    
+    uf = deg2rad(1)*ones(fIn,1);
+    yf = zeros(fOut,1);
+    z0 = [g; uf; yf];    
 
     % Equality constraints: Aeq*z = beq
-    Aeq = [Up*Z' zeros(pIn,fIn);
-        Yp*Z' zeros(pOut,fIn);
-        Uf*Z' -eye(fIn)];
+    Aeq = [Up*Z' zeros(pIn,fIn) zeros(pIn,fOut);
+        Yp*Z' zeros(pOut,fIn) zeros(pOut,fOut);
+        Uf*Z' -eye(fIn) zeros(fIn,fOut);
+        Yf*Z' zeros(fOut,fIn) -eye(fOut)];
 
     beq = [uini;
         yini;
-        zeros(fIn,1)];
+        zeros(fIn,1);
+        zeros(fOut,1)];
 
     if previewFlag == 1
         Aeq = [Aeq;
-            Wp*Z' zeros(pDist,fIn);
-            Wf*Z' zeros(fDist,fIn)];
+            Wp*Z' zeros(pDist,fIn) zeros(pDist,fOut);
+            Wf*Z' zeros(fDist,fIn) zeros(fDist, fOut)];
 
         beq = [beq;
             wini;
@@ -100,8 +103,8 @@ if method == 1 % quadprog
     
     % Input rate conbstraints
     [A,b] = getInputRateConstr(nInputs,f,controlParams.duf);
-    Aineq = [zeros(size(A,1),length(g)) A;
-         zeros(size(A,1),length(g)) -A];
+    Aineq = [zeros(size(A,1),length(g)) A zeros(size(A,1),length(yf));
+         zeros(size(A,1),length(g)) -A zeros(size(A,1),length(yf))];
      
     bineq = [b(1) + data.uini(end); %TBD MIMO
             b(2:end);
@@ -109,8 +112,8 @@ if method == 1 % quadprog
             b(2:end)];   
 
     % Input constraints
-    A_lbu = -[zeros(fIn,length(g)) eye(fIn)];
-    A_ubu = [zeros(fIn,length(g)) eye(fIn)];
+    A_lbu = -[zeros(fIn,length(g)) eye(fIn) zeros(fIn,length(yf))];
+    A_ubu = [zeros(fIn,length(g)) eye(fIn) zeros(fIn,length(yf))];
 
     Aineq = [Aineq;
              A_lbu;
@@ -123,57 +126,56 @@ if method == 1 % quadprog
              b_lbu;
              b_ubu]; 
 
-    % [ineq_iis,eq_iis,~] = deletionfilter(Aineq,bineq,Aeq,beq,lbu,ubu);
-    % find(ineq_iis); numel(find(ineq_iis))
-    % find(eq_iis); numel(find(eq_iis))
-    % 
-    % n = length(z0);
-    % z = optimvar('z',n);
-    % 
-    % constr.eq = Aeq*z == beq;
-    % constr.ineq = Aineq*z <= bineq;    
-    % 
+    if method == 1 % QP
+
+    %%%%%%%%%%%%%%%%%%%% Constraints feasibility %%%%%%%%%%%%%%%%%%%%%%%%%%
+    % [ineq_iis,eq_iis,~] = deletionfilter(Aineq,bineq,Aeq,beq,[],[]);    
+    % find(ineq_iis); Infeasible_ineqs = numel(find(ineq_iis))
+    % find(eq_iis); Infeasible_eqs = numel(find(eq_iis))
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%%%%%%%%%%% active-set quadprog feasibility %%%%%%%%%%%%%%%%%%%%%%
     % H = 2* blkdiag(Z*Yf'*Q*Yf*Z',R);
     % HnSp = (null(Aeq)).'*H*null(Aeq);
-    % min(real(eig(HnSp)))
-    % 
-    % objFcn = (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
-    %     z(length(g)+1:end)'*R*z(length(g)+1:end);
-    % qprob = optimproblem("Objective",objFcn);
-    % qprob.Constraints = constr;
-    % % opts = optimoptions('quadprog','Algorithm','active-set');
-    % opts = optimoptions('quadprog','Algorithm','interior-point-convex');
-    % z00 = struct('z',z0);
-    % [sol,~,~,~] = solve(qprob,z00,'options',opts);
-    % z = sol.z;
+    % posdef = min(real(eig(HnSp)))>=0
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%% fmincon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % objFcn = @(z) (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
-    %     z(length(g)+1:end)'*R*z(length(g)+1:end);
-    % 
-    % options = optimoptions('fmincon','Algorithm','interior-point','UseParallel',true);
-    % z = fmincon(objFcn,z0,Aineq,bineq,Aeq,beq,lbu,ubu,[],options);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    n = length(z0);
+    z = optimvar('z',n);    
+    % objFcn = z(length(g)+1:end)'*R*z(length(g)+1:end);
+    objFcn = z(length(g)+length(uf)+1:end).'*Q*z(length(g)+length(uf)+1:end) + ...
+        z(length(g)+1:length(g)+length(uf))'*R*z(length(g)+1:length(g)+length(uf));
+    qprob = optimproblem("Objective",objFcn);
+
+    constr.eq = Aeq*z == beq;
+    constr.ineq = Aineq*z <= bineq;   
+    qprob.Constraints = constr;
+
+    opts = optimoptions('quadprog','Algorithm','active-set');
+    % opts = optimoptions('quadprog','Algorithm','interior-point-convex');
+    initPoint = struct('z',z0);
+    [sol,~,~,~] = solve(qprob,initPoint,'options',opts);
+    z = sol.z;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%% quadprog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % H1 = Z*Yf.'*Q.^(1/2);
     % H1 = H1*H1';
     % H = 2* blkdiag(H1,R);
-    % H = 2* blkdiag(Z*Yf'*Q*Yf*Z',R);
+    % % H = 2* blkdiag(Z*Yf'*Q*Yf*Z',R);
     % c = [-2*Z*Yf'*Q*rf;
     %     zeros(fIn,1)];  
-    % options = optimoptions('quadprog','Algorithm','interior-point-convex','MaxIterations',500);
+    % options = optimoptions('quadprog','Algorithm', ...
+    %     'interior-point-convex','MaxIterations',500);
     % z = quadprog(H,c,Aineq,bineq,Aeq,beq,[],[],[],options);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
 
     %%%%%%%%%%%%%%%%%%%%%%%% yalmip quadprog %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % x = sdpvar(size(z0,1),1);
     % Aeqx = Aeq*x;
     % Aineqx = Aineq*x;
     % Constraints = [Aeqx == beq, Aineqx <= bineq];
-    % % H1 = Z*Yf.'*Q.^(1/2);
-    % % H = 2* blkdiag(H1*H1',R);    
-    % H = 2* blkdiag(Z*Yf'*Q*Yf*Z',R);
+    % H1 = Z*Yf.'*Q.^(1/2);
+    % H = 2* blkdiag(H1*H1',R);    
     % c = [-2*Z*Yf'*Q*rf;
     %     zeros(fIn,1)];  
     % 
@@ -182,14 +184,17 @@ if method == 1 % quadprog
     % z = value(x);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SDP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     H = 2* blkdiag(Z*Yf'*Q*Yf*Z',R);
+     %%%%%%%%%%%%%%%%%%%%%%%%%%%% fmincon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % objFcn = @(z) (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
+    %     z(length(g)+1:end)'*R*z(length(g)+1:end);
+    % 
+    % options = optimoptions('fmincon','Algorithm','interior-point','UseParallel',true);
+    % z = fmincon(objFcn,z0,Aineq,bineq,Aeq,beq,lbu,ubu,[],options);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-     if ~issymmetric(H)
-        H1 = Z*Yf.'*Q.^(1/2); % force H symmetric
-        H = 2* blkdiag(H1*H1',R);   
-     end
-
+    elseif method == 2 % SDP
+    H1 = Z*Yf.'*Q.^(1/2); % force H symmetric
+    H = 2* blkdiag(H1*H1',R);   
     c = [-2*Z*Yf'*Q*rf;
         zeros(fIn,1)];  
 
@@ -213,31 +218,31 @@ if method == 1 % quadprog
     t = sdpvar(1);
     x = sdpvar(size(H,1),1);
 
+    % Objective function
+    obj = t;
+
     % Constraints
     C = [eye(size(M,1)) M*x zeros(size(M,1),size(A,1));
         x.'*M.' t-c.'*x zeros(size(A,1),1).';
         zeros(size(A,1),size(M,1)) zeros(size(A,1),1) diag(b-A*x)];
-    Constr = [C >=0, Aeq*x == beq];
+    Constr = [C >=0, Aeq*x == beq]; 
 
-    % Objective function
-    obj = t;
-
-    % Get optim
+    % Solve optimization
     % optimize(C >= 0, obj,sdpsettings('debug',1,'solver','sedumi'));
     % optimize(C >= 0, obj,sdpsettings('debug',1,'solver','sdpt3'));
-    % optimize(Constr, obj,sdpsettings('debug',1,'solver','sedumi'));
-    % optimize(Constr, obj);
-    z = value(x);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-elseif method == 2 % casadi + NLP
+    % optimize(Constr, obj,sdpsettings('debug',1,'solver','mosek'));
+    optimize(Constr, obj,sdpsettings('debug',1,'solver','sdpt3'));
+    z = value(x);    
+    end        
+elseif method ==3 % casadi + NLP
+
     g = casadi.SX.sym('g', size(Z,1), 1);
     uf = casadi.SX.sym('uf',fIn,1);
     z = [g;uf];
 
     if previewFlag == 1
-        Aeq = [Up;Yp;Uf;Wp;Wf]*Z';
-        beq = [uini;yini;uf;wini;wf];
+        Aeq = [Up;Yp;Uf;Yf;Wp;Wf]*Z';
+        beq = [uini;yini;uf;zeros(fOut,1);wini;wf];
     else
         Aeq = [Up;Yp;Uf]*Z';
         beq = [uini;yini;uf];
@@ -269,7 +274,8 @@ elseif method == 2 % casadi + NLP
     ubu(length(g)+1:length(g)+length(uf)) = kron(ones(f,1), ...
         controlParams.ubu);
 
-    cost = (Yf*Z'*g-rf)'*Q*(Yf*Z'*g-rf) + uf'*R*uf;
+    % cost = (Yf*Z'*g-rf)'*Q*(Yf*Z'*g-rf) + uf'*R*uf;
+    cost = uf'*R*uf;
 
     prob = struct('f', cost, 'x', z, 'g', q);
     solver = casadi.nlpsol('solver', 'ipopt', prob);
@@ -284,9 +290,9 @@ else
 end
 
 % g = z(1:size(Z,1));
-uf = z(size(Z,1)+1:end);
-
+uf = z(size(Z,1)+1:size(Z,1)+f*nInputs);
 uOpt = uf(1:nInputs);
+yf1 = z(size(Z,1)+f*nInputs+1:size(Z,1)+f*nInputs+nOutputs);
 
 end
 
