@@ -108,7 +108,6 @@ v = v./v0hat_max;
 
 %% Solve the constrained optimization problem
 ivFlag = 1;
-previewFlagWind = 1;
 previewFlagWaves = 1;
 
 % Choose optimization method
@@ -125,42 +124,44 @@ prevPitCom = 0;
 prevIntErr = 0;
 intErr = 0;
 
+ffFlag = 1; % enables/disables wave DeePC controller
+fbFlag = 1; % enables/disables PI controller
+
 for idxWind=1:kFinalWind
     disp('Iteration: ')
     disp(idxWind)
 
-    if mod(idxWind-1,Ts_ratio) == 0 
+    if ffFlag == 1
+        if mod(idxWind-1,Ts_ratio) == 0
 
-        % Reference trajectory: zero reference, disturbance rejection
-        rfWaves = refWaves((idxWaves-1)*nOutputs+1:(idxWaves-1)*nOutputs+nOutputs*controlParamsWaves.f);
+            % Reference trajectory: zero reference, disturbance rejection
+            rfWaves = refWaves((idxWaves-1)*nOutputs+1:(idxWaves-1)*nOutputs+nOutputs*controlParamsWaves.f);
 
-        % Wave preview
-        dataWaves.wf = Mp(idxWaves:idxWaves+controlParamsWaves.f-1);
-        uStarFF = deepc(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
-        uSeqFF(:,idxWind) = uStarFF(1);        
+            % Wave preview
+            dataWaves.wf = Mp(idxWaves:idxWaves+controlParamsWaves.f-1);
+            uStarFF = deepc(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
+            uSeqFF(:,idxWind) = uStarFF(1);
 
-        idxWaves = idxWaves + 1;
-    else
-        uSeqFF(:,idxWind) = uSeqFF(:,idxWind-1);
+            idxWaves = idxWaves + 1;
+        else
+            uSeqFF(:,idxWind) = uSeqFF(:,idxWind-1);
+        end
     end
 
-    if idxWaves> controlParamsWaves.f + 5
-    % if idxWind >=2
-        measOutput = out(:,idxWind-1);
-        prevPitCom = uSeqFB(:,idxWind-1);
-        prevIntErr = intErr;
-    % end
-        % %%%%%%%%%%%%%%%%%%%%%%%%% LPF %%%%%%%%%%%%%%%%%%%%%%%%%%%%        
-        % LPF_cutoff = 0.157; % rad/s
-        % Alpha = exp( -Ts_wind * LPF_cutoff );
-        % 
-        % % Apply the Filter
-        % filteredOutput = (1.0 - Alpha)*measOutput + Alpha * filteredOutput;
-        % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
-
-    % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput,prevPitCom,prevIntErr,Ts_wind);
-    [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
-
+    if ffFlag == 1 && fbFlag == 1
+        if idxWaves> controlParamsWaves.f + 5
+            measOutput = out(:,idxWind-1);
+            prevPitCom = uSeqFB(:,idxWind-1);
+            prevIntErr = intErr;
+            [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
+        end
+    elseif ffFlag == 0
+        if idxWind >=2
+            measOutput = out(:,idxWind-1);
+            prevPitCom = uSeqFB(:,idxWind-1);
+            prevIntErr = intErr;
+            [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
+        end
     end
 
     uTotal(:,idxWind) = uSeqFB(:,idxWind) + uSeqFF(:,idxWind);
@@ -174,13 +175,15 @@ for idxWind=1:kFinalWind
     x_G(:,idxWind+1) = G_d.A*x_G(:,idxWind) + G_d.B*u;
     out(:,idxWind) = G_d.C*x_G(:,idxWind) + G_d.D*u + Std.*randn(size(out(:,idxWind)));    
 
-    % if mod(idxWind-1,Ts_ratio) == 0
-    %     dataWaves.uini = [dataWaves.uini(nInputs+1:end); uSeqFF(:,idxWind)];        
-    %     dataWaves.yini = [dataWaves.yini(nOutputs+1:end); out(:,idxWind)];       
-    %     if previewFlagWaves == 1
-    %         dataWaves.wini = [dataWaves.wini(nDist+1:end); Mp(idxWaves)];
-    %     end
-    % end
+    if ffFlag == 1
+        if mod(idxWind-1,Ts_ratio) == 0
+            dataWaves.uini = [dataWaves.uini(nInputs+1:end); uSeqFF(:,idxWind)];
+            dataWaves.yini = [dataWaves.yini(nOutputs+1:end); out(:,idxWind)];
+            if previewFlagWaves == 1
+                dataWaves.wini = [dataWaves.wini(nDist+1:end); Mp(idxWaves)];
+            end
+        end
+    end
 end
 toc
 

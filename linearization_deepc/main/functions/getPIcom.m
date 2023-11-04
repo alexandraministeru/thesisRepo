@@ -2,8 +2,8 @@ function [PitCom,intErr] = getPIcom(ref,measOutput,prevPitCom,prevIntErr,Ts)
 KP = 15;
 KI = 5;
 
-KP = 23;
-KI = 17;
+% KP = 23;
+% KI = 17;
 % KK      = 0.1099965;
 KK = 10; 
 
