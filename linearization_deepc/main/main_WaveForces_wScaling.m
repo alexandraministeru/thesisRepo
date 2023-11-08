@@ -36,7 +36,7 @@ M_pitch = M_pitch(1:20:end); % 1/0.05
 % cd ..\main
 % save('inputData\linDataWave.mat','VTK','FAST_linData','LTIsys','matData','MBC');
 
-load('inputData\linDataWave.mat');
+% load('inputData\linDataWave.mat');
 
 %% Find index of blade pitch, gen speed and wind speed
 % inputChannelsList = MBC.DescCntrlInpt;
@@ -169,6 +169,8 @@ u_Mp = u_hat_Mp./MpitchHat_max;
 
 % Simulate system and get open-loop I/O data set
 y = lsim(G_d,[u_bladePitch u_windSpeed u_Mp],t); % zero initial condition, around linearization point
+% y = lsim(G_d,[u_bladePitch u_windSpeed zeros(size(u_Mp))],t); % zero initial condition, around linearization point
+
 
 % Add measurement noise on output
 noiseAns = input('Add measurement noise? y/n[y]: ','s');
@@ -185,7 +187,7 @@ elseif strcmp(noiseAns,'n')
     noiseFlag = 0;
 end
 
-Std = 5e-5; % measurement noise standard deviation
+Std = 5e-3; % measurement noise standard deviation
 Std = Std*noiseFlag;
 y = y + Std.*randn(size(y));
 
@@ -209,7 +211,10 @@ set(gcf,'Color','White')
 %% DeePC parameters
 N = 600; % lenght of data set
 p = 20; % past data window
-f = 20; % prediction window
+f = 20; % prediction windowN = 600; % lenght of data set
+% N = 500;
+% p = 40; % past data window
+% f = 20; % prediction window
 Nbar = N-p-f+1;
 i = 1;
 
@@ -241,6 +246,7 @@ data.Yp = constructHankelMat(y,i,p,Nbar);
 data.Uf = constructHankelMat(u_bladePitch,i+p,f,Nbar);
 data.Yf = constructHankelMat(y,i+p,f,Nbar);
 
+% disturbMat = u_windSpeed;
 disturbMat = u_Mp;
 % disturbMat = [u_windSpeed u_Mp];
 
@@ -253,7 +259,7 @@ else
 end
 
 %% Set up control loop
-kFinal = 400; % simulation steps
+kFinal = 600; % simulation steps
 tsim = 0:Ts:Ts*(kFinal-1);
 nInputs = size(data.Up,1)/p;
 nOutputs = size(data.Yp,1)/p;
@@ -283,23 +289,29 @@ uSeq = zeros(nInputs,kFinal);
 out = zeros(nOutputs,kFinal);
 
 %% CL disturbances
-% TurbWind
-% load('inputData\turbWind_16mps_long.mat')
-% v = turbWind(1:20:end);
-% v = v-16; % center around linearization point
-% v = v./v0hat_max;
+% % TurbWind
+load('inputData\turbWind_16mps_long.mat')
+% load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
+v = turbWind(1:20:end);
+% v = windData;
+v = v-16; % center around linearization point
+v = v./v0hat_max;
 
 % % EOG
 % load('inputData\eog_16mps.mat','Wind1VelX','Time')
 % v = Wind1VelX(1:125:end);
-% v = v-16;
-% v = [zeros(100,1); v; zeros(kFinal,1)];
+% v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
+% v = v-16; % center around linearization point
+% v = [v;zeros(f,1)]
+% % v = v-16;
+% % v = [zeros(100,1); v; zeros(kFinal,1)];
 % v = v./v0hat_max;
 
 % Fsg = F_surge./FsurgHat_max;
 
 v = zeros(kFinal+f,1)/v0hat_max; % Steady wind
 Mp = M_pitch./MpitchHat_max ;
+% Mp = zeros(size(Mp));
 
 %% Solve the constrained optimization problem
 % Use instrumental variables
@@ -324,7 +336,8 @@ ivFlag = 1;
 % output channels and the n-th element on the diagonal represents the
 % weight for the corresponding n-th output
 
-weightOutputs = 1e2*diag(1);
+weightOutputs = 1e3*diag(1);
+% weightOutputs = 1e2*diag(1);
 controlParams.Q = kron(eye(f),weightOutputs);
 
 % weightInputs diagonal matrix of size m-by-m, where m is the number of
@@ -370,6 +383,7 @@ for k=1:kFinal
 
     % Wind preview
     if previewFlag == 1
+        % data.wf = v(k:k+f-1);
         data.wf = Mp(k:k+f-1);
         % previewData = [v(k:k+f-1) Mp(k:k+f-1)];
         % data.wf = reshape(previewData',[],1);
@@ -393,6 +407,7 @@ for k=1:kFinal
     data.uini = [data.uini(nInputs+1:end); uStar];
     data.yini = [data.yini(nOutputs+1:end); out(:,k)];
     if previewFlag == 1
+        % data.wini = [data.wini(nDist+1:end); v(k)];
         data.wini = [data.wini(nDist+1:end); Mp(k)];
         % data.wini = [data.wini(nDist+1:end); v(k); Mp(k)];
     end
@@ -460,10 +475,10 @@ set(gcf,'Color','White')
 %     saveFlag = 0;
 % end
 
-saveFlag = 0;
+saveFlag = 1;
 
 if saveFlag == 1
-    simType = 'waveRotSpeed';
+    simType = 'wave_wind';
     inName = '\theta_c (in deg)';
     % outName = 'Generator speed (in rpm)';
     outName = 'Rotor speed (in rpm)';
@@ -481,10 +496,10 @@ if saveFlag == 1
             description = 'preview';
         elseif size(disturbMat,2) == 2
             description = 'Fsg_Mp_preview';
-        elseif isequal(disturbMat,u_Fsg)
-             description = 'Fsg_preview';
-        else
+        elseif isequal(disturbMat,u_Mp)
              description = 'Mp_preview';
+        else
+             description = 'Fsg_preview';
         end  
         fileName = [fileName '_' description];
     else
@@ -514,7 +529,7 @@ if saveFlag == 1
     end
 
     % Check if file name already exists (can go up to filename19.mat)
-    while isfile(['outputData\' fileName ext])
+    while isfile(['updateMeeting\' fileName ext])
         if isstrprop(fileName(end),'digit')
             currIdx = str2double(fileName(end));
             fileName = [fileName(1:end-1) num2str(currIdx+1)];
@@ -525,10 +540,10 @@ if saveFlag == 1
 
     % Save variables
     if scaledFlag == 1
-        save(['outputData\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
+        save(['updateMeeting\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag','uhat_max','ehat_max');
     else
-        save(['outputData\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
+        save(['updateMeeting\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag');
     end
 end

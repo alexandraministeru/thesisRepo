@@ -55,7 +55,7 @@ G_d = c2d(G,Ts_wind);
 Std = 5e-5;
 
 %% Set up control loop
-tFinal = 75; % simualtion length in seconds
+tFinal = 100; % simualtion length in seconds
 
 kFinalWind = tFinal/Ts_wind; % simulation steps
 kFinalWaves = tFinal/Ts_waves;
@@ -88,19 +88,20 @@ out = zeros(nOutputs,kFinalWind);
 % Waves:
 Mp = M_pitch./MpitchHat_max ;
 
-% % % Wind:
-% % % Turbulent wind
-% load('inputData\turbWind_16mps_long.mat')
-% v = [turbWind; turbWind; turbWind];
-% v = v-16; % center around linearization point
-% v = v./v0hat_max;
-
-% % EOG
-load('inputData\eog_16mps.mat','Wind1VelX','Time')
-v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
-v = v-16;
-v = [zeros(500,1); v ; zeros(2000,1)];
+% % Wind:
+% Turbulent wind
+load('inputData\turbWind_16mps.mat') 
+% v = windData;
+v = [windData; windData; windData];
+v = v-16; % center around linearization point
 v = v./v0hat_max;
+
+% EOG
+% load('inputData\eog_16mps.mat','Wind1VelX','Time')
+% v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
+% v = v-16;
+% v = [zeros(500,1); v ; zeros(2000,1)];
+% v = v./v0hat_max;
 
 % v = zeros(20000,1);
 % Mp = zeros(5000,1);
@@ -153,13 +154,64 @@ for idxWind=1:kFinalWind
             measOutput = out(:,idxWind-1);
             prevPitCom = uSeqFB(:,idxWind-1);
             prevIntErr = intErr;
-            [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
+            %%%%%%%%%%% measOutput averaging %%%%%%%%%%%
+            % avgWindowPoints = 1;
+            % if idxWind < avgWindowPoints
+            %     avgWindow = [zeros(avgWindowPoints-idxWind,1); out(:,1:idxWind)'];
+            % else
+            %     avgWindow = out(:,idxWind-avgWindowPoints+1:idxWind);
+            % end
+            % avgMeasOutput = mean(avgWindow);
+            % 
+            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),avgMeasOutput,prevPitCom,prevIntErr,Ts_wind);
+           %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+           %%%%%%%%%%%%%%%%%%%% LPF %%%%%%%%%%%%%%%%%%%%
+            % if idxWind > 25
+            %     filteredOutput = lowpass(out(:,idxWind-25:idxWind),3e-3,Ts_wind);
+            % else
+            %     filteredOutput = lowpass(out(:,1:idxWind),3e-3,Ts_wind);
+            % end
+            % 
+            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput(end),prevPitCom,prevIntErr,Ts_wind);
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+           
+           [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
         end
-    elseif ffFlag == 0
+    elseif ffFlag == 0 && fbFlag == 1
         if idxWind >=2
             measOutput = out(:,idxWind-1);
             prevPitCom = uSeqFB(:,idxWind-1);
             prevIntErr = intErr;
+            %%%%%%%%%%% measOutput averaging %%%%%%%%%%%
+            % avgWindowPoints = 1;
+            % if idxWind < avgWindowPoints
+            %     avgWindow = [zeros(avgWindowPoints-idxWind,1); out(:,1:idxWind)'];
+            % else
+            %     avgWindow = out(:,idxWind-avgWindowPoints+1:idxWind);
+            % end
+            % avgMeasOutput = mean(avgWindow);
+            % 
+            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),avgMeasOutput,prevPitCom,prevIntErr,Ts_wind);
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            %%%%%%%%%%%%%%%%%%%% LPF %%%%%%%%%%%%%%%%%%%%
+            % if idxWind > 25
+            %     filteredOutput = lowpass(out(:,idxWind-25:idxWind),3e-3,Ts_wind);
+            % else
+            %     filteredOutput = lowpass(out(:,1:idxWind),3e-3,Ts_wind);
+            % end
+            % 
+            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput(end),prevPitCom,prevIntErr,Ts_wind);
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            %%%%%%%%%%%%%%%%%%% LPF2 %%%%%%%%%%%%%%%%%%%%
+            % LPF_cutoff = 1; % rad/s
+            % Alpha = exp( -Ts_wind * LPF_cutoff );
+            % filteredOutput = (1.0 - Alpha)*measOutput + Alpha * filteredOutput;
+            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput,prevPitCom,prevIntErr,Ts_wind);
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
             [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
         end
     end

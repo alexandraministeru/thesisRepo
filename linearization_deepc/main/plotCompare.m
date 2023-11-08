@@ -95,8 +95,8 @@ file2 = 'outputData\turbWindRot_preview_QP_tuningp2.mat';
 % file1='invFF\waveRotSpeed_noPreview_QP1.mat';
 % file2='invFF\waveRotSpeed_Fsg_Mp_preview_QP3.mat';
 
-file1='outputData\waveRotSpeed_noPreview_QP_scaled6.mat';
-file2='outputData\waveRotSpeed_Mp_preview_QP_scaled6.mat';
+% file1='outputData\waveRotSpeed_noPreview_QP_scaled6.mat';
+% file2='outputData\waveRotSpeed_Mp_preview_QP_scaled6.mat';
 
 
 % file1='outputData\aa_noPreview_QP4.mat';
@@ -117,6 +117,37 @@ file2='outputData\waveRotSpeed_Mp_preview_QP_scaled6.mat';
 
 % file1='outputData\eogWindRot_noPreview_QP2.mat';
 % file2='outputData\eogWindRot_preview_QP2.mat';
+
+%%%%%%%masterMeeting%%%%%%%%%
+file1='masterMeeting\eog_noPreview_QP.mat';
+file2='masterMeeting\eog_preview_QP.mat';
+
+file1='masterMeeting\turb_noPreview_QP.mat';
+file2='masterMeeting\turb_preview_QP.mat';
+
+file1='masterMeeting\wave_noPreview_QP_scaled.mat';
+file2='masterMeeting\wave_Mp_preview_QP_scaled.mat';
+
+% file1='masterMeeting\wave2x_noPreview_QP_scaled.mat';
+% file2='masterMeeting\wave2x_Fsg_Mp_preview_QP_scaled.mat';
+
+file1='updateMeeting\sim1_Fsg_preview_QP_scaled.mat'
+file2='updateMeeting\sim2_Fsg_preview_QP_scaled.mat'
+file3='updateMeeting\sim3_Fsg_preview_QP_scaled.mat'
+file4='updateMeeting\sim4_Fsg_preview_QP_scaled.mat'
+
+file1='updateMeeting\wave_noPreview_QP_scaled.mat';
+file1='updateMeeting\wave_Mp_preview_QP_scaled.mat';
+file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
+
+
+file1='updateMeeting\wave_wind_noPreview_QP_scaled.mat';
+file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
+file3='updateMeeting\wave_wWind_Fsg_Mp_preview_QP_scaled.mat';
+
+
+
+
 
 % % % Update data structure for old data files
 % inName = '\theta_c (in deg)';
@@ -210,7 +241,7 @@ for idxOut = 1:nFiles
     if data{idxOut}.scaledFlag == 1
         data{idxOut}.out = data{idxOut}.out.*data{idxOut}.ehat_max;
     end
-    plot(data{idxOut}.tsim,data{idxOut}.out);   
+    plot(data{idxOut}.tsim,data{idxOut}.out,'LineWidth',1);   
     RMSE(idxOut) = sqrt(norm(data{idxOut}.out)^2/length(data{idxOut}.out));
     hold on
 end

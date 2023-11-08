@@ -115,7 +115,8 @@ M_pitch = M_pitch(1:Ts_ratio:end);
 [dataWaves,controlParamsWaves] = setupDeePCwave(G,Ts_waves,M_pitch);
 
 % Discretize system
-G_d = c2d(G,Ts_wind);
+G_d_wind = c2d(G,Ts_wind);
+G_d_waves = c2d(G,Ts_waves);
 
 Std = 5e-5;
 
@@ -136,7 +137,7 @@ refWind = zeros(kFinalWind + controlParamsWind.f,1);
 refWaves = zeros(kFinalWaves + controlParamsWaves.f,1);
 
 % Keep track of states
-nStates_G = size(G_d.A,1);
+nStates_G = size(G_d_wind.A,1);
 x_G = zeros(nStates_G,kFinalWind+1);
 
 % Set initial condition
@@ -147,9 +148,21 @@ x_G(:,1) = x0_G;
 uSeqFB = zeros(nInputs,kFinalWind);
 uSeqFB(:,1:10) = dataWind.uini(1);
 uSeqFF = zeros(nInputs,kFinalWind);
-% yf1 = zeros(nOutputs, kFinalWind);
 uSeqTot = zeros(nInputs,kFinalWind);
 out = zeros(nOutputs,kFinalWind);
+out_wind = zeros(nOutputs,kFinalWind);
+out_waves = zeros(nOutputs,kFinalWind);
+
+% Wind states
+x_G_wind = zeros(nStates_G,kFinalWind+1);
+x0_G_wind = zeros(nStates_G,1);
+x_G_wind(:,1) = x0_G_wind;
+
+% Wave states
+x_G_waves = zeros(nStates_G,kFinalWind+1);
+x0_G_waves = zeros(nStates_G,1);
+x_G_waves(:,1) = x0_G_waves;
+
 
 %% CL disturbances
 % Waves:
@@ -157,19 +170,17 @@ Mp = M_pitch./MpitchHat_max ;
 
 % % Wind:
 % % % % Turbulent wind
-% % load('inputData\turbWind_16mps_long.mat')
+% load('inputData\turbWind_16mps_long.mat')
 % v = [turbWind; turbWind; turbWind];
-load('inputData\turbWind_16mps.mat') 
-v = [windData; windData; windData];
-v = v-16; % center around linearization point
-v = v./v0hat_max;
-
-% % % % EOG
-% load('inputData\eog_16mps.mat','Wind1VelX','Time')
-% v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
-% v = v-16;
-% v = [v ; zeros(2000,1)];
+% v = v-16; % center around linearization point
 % v = v./v0hat_max;
+
+% % % EOG
+load('inputData\eog_16mps.mat','Wind1VelX','Time')
+v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
+v = v-16;
+v = [v ; zeros(2000,1)];
+v = v./v0hat_max;
 
 % v = zeros(20000,1);
 % Mp = zeros(5000,1);
@@ -177,7 +188,7 @@ v = v./v0hat_max;
 
 %% Solve the constrained optimization problem
 ivFlag = 1;
-previewFlagWind = 0;
+previewFlagWind = 1;
 previewFlagWaves = 1;
 
 % Choose optimization method
@@ -192,44 +203,26 @@ for idxWind=1:kFinalWind
     disp('Iteration: ')
     disp(idxWind)
 
-    if mod(idxWind-1,Ts_ratio) == 0  && idxWind ~= 1
+    if mod(idxWind-1,Ts_ratio) == 0
 
         % Reference trajectory: zero reference, disturbance rejection
         rfWaves = refWaves((idxWaves-1)*nOutputs+1:(idxWaves-1)*nOutputs+nOutputs*controlParamsWaves.f);
 
         % Wave preview
         dataWaves.wf = Mp(idxWaves:idxWaves+controlParamsWaves.f-1);
-        % [uStarFF, yf] = deepcFF(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
         uStarFF = deepc(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
-        % yf1(:,idxWind) = yf;
         uSeqFF(:,idxWind) = uStarFF(1);
 
         idxWaves = idxWaves + 1;
     else
-        if idxWind == 1
-            uSeqFF(:,idxWind) = 0;
-            uFFtemp = zeros(controlParamsWaves.f,1);
-        else % ZOH
         uSeqFF(:,idxWind) = uSeqFF(:,idxWind-1);
-        end
     end
 
     % Wind reference trajectory
-    rfWind = refWind((idxWind-1)*nOutputs+1:(idxWind-1)*nOutputs+nOutputs*controlParamsWind.f);
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%% FB with input preview %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % if idxWaves >= 2
-    %     uFF_preview(1:Ts_ratio-mod(idxWind-1,Ts_ratio)) = uStarFF(1);
-    %     uFF_preview(Ts_ratio-mod(idxWind-1,Ts_ratio)+1:end) = uStarFF(2);
-    % end
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    rfWind = refWind((idxWind-1)*nOutputs+1:(idxWind-1)*nOutputs+nOutputs*controlParamsWind.f);   
 
     % Wind preview
-    if previewFlagWind == 1
-        %%%%%%%%%%%%%%%%%%% FB with input preview %%%%%%%%%%%%%%%%%%%
-        % previewData = [uFF_preview v(idxWind:idxWind+controlParamsWind.f-1)];
-        % dataWind.wf = reshape(previewData',[],1);
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if previewFlagWind == 1        
         dataWind.wf = v(idxWind:idxWind+controlParamsWind.f-1);
     else
         dataWind.wf = [];
@@ -237,35 +230,48 @@ for idxWind=1:kFinalWind
 
     % DeePC optimal control input
     uStarFB = deepc(dataWind,rfWind,controlParamsWind,method,ivFlag,previewFlagWind);
-    if idxWind > controlParamsWind.f
-        uSeqFB(:,idxWind) = uStarFB;
-    end
+    uSeqFB(:,idxWind) = uStarFB;
 
-     uTotal = uSeqFB(:,idxWind) + uSeqFF(:,idxWind);
-     uTotal = min( max(uTotal, deg2rad(-10)/uhat_max ),  deg2rad(10)/uhat_max );
+    uTotal = uSeqFB(:,idxWind) + uSeqFF(:,idxWind);
+    uTotal = min( max(uTotal, deg2rad(-10)/uhat_max ),  deg2rad(10)/uhat_max );
 
     u = [uTotal;
         v(idxWind)
         Mp(idxWaves)];
 
     % Apply optimal input, simulate output
-    x_G(:,idxWind+1) = G_d.A*x_G(:,idxWind) + G_d.B*u;
-    out(:,idxWind) = G_d.C*x_G(:,idxWind) + G_d.D*u + Std.*randn(size(out(:,idxWind)));
+    x_G(:,idxWind+1) = G_d_wind.A*x_G(:,idxWind) + G_d_wind.B*u;
+    out(:,idxWind) = G_d_wind.C*x_G(:,idxWind) + G_d_wind.D*u + Std.*randn(size(out(:,idxWind)));
+
+    %windSS
+    uwind = [uSeqFB(:,idxWind);
+        v(idxWind);
+        0];
+
+    % Apply optimal input, simulate output
+    x_G_wind(:,idxWind+1) = G_d_wind.A*x_G_wind(:,idxWind) + G_d_wind.B*uwind;
+    out_wind(:,idxWind) = G_d_wind.C*x_G_wind(:,idxWind) + G_d_wind.D*uwind + Std.*randn(size(out(:,idxWind)));    
+
 
     % Update past data with most recent I/O data
     dataWind.uini = [dataWind.uini(nInputs+1:end); uSeqFB(:,idxWind)];
-    dataWind.yini = [dataWind.yini(nOutputs+1:end); out(:,idxWind)];
+    dataWind.yini = [dataWind.yini(nOutputs+1:end); out_wind(:,idxWind)];
     if previewFlagWind == 1
         dataWind.wini = [dataWind.wini(nDist+1:end); v(idxWind)];
     end
 
-    if mod(idxWind-1,Ts_ratio) == 0 && idxWind ~= 1
+    if mod(idxWind-1,Ts_ratio) == 0
+        %waveSS
+        uwave = [uSeqFF(:,idxWind);
+            0;
+            Mp(idxWaves)];
+
+        % Apply optimal input, simulate output
+        x_G_waves(:,idxWaves+1) = G_d_waves.A*x_G_waves(:,idxWaves) + G_d_waves.B*uwave;
+        out_waves(:,idxWaves) = G_d_waves.C*x_G_waves(:,idxWaves) + G_d_waves.D*uwave + Std.*randn(size(out(:,idxWind)));
+
         dataWaves.uini = [dataWaves.uini(nInputs+1:end); uSeqFF(:,idxWind)];
-        % if idxWaves <= controlParamsWaves.f + 10
-            dataWaves.yini = [dataWaves.yini(nOutputs+1:end); out(:,idxWind)];
-        % else
-        %     dataWaves.yini = [dataWaves.yini(nOutputs+1:end); yf1(:,idxWind)];
-        % end
+        dataWaves.yini = [dataWaves.yini(nOutputs+1:end); out_waves(:,idxWaves)];
         if previewFlagWaves == 1
             dataWaves.wini = [dataWaves.wini(nDist+1:end); Mp(idxWaves)];
         end
@@ -405,10 +411,10 @@ set(gcf,'Color','White')
 %     saveFlag = 0;
 % end
 
-saveFlag = 1;
+saveFlag = 0;
 
 if saveFlag == 1
-    simType = 'deepcx2';
+    simType = 'waveRotSpeed';
     inName = '\theta_c (in deg)';
     % outName = 'Generator speed (in rpm)';
     outName = 'Rotor speed (in rpm)';
@@ -459,7 +465,7 @@ if saveFlag == 1
     end
 
     % Check if file name already exists (can go up to filename19.mat)
-    while isfile(['updateMeeting\' fileName ext])
+    while isfile(['outputData2c\' fileName ext])
         if isstrprop(fileName(end),'digit')
             currIdx = str2double(fileName(end));
             fileName = [fileName(1:end-1) num2str(currIdx+1)];
@@ -470,10 +476,10 @@ if saveFlag == 1
 
     % Save variables
     if scaledFlag == 1
-        save(['updateMeeting\' fileName ext],'inName','outName','tsimWind','kFinal','refWind','Ts','controlParams', 'out', ...
+        save(['outputData2c\' fileName ext],'inName','outName','tsimWind','kFinal','refWind','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag','uhat_max','ehat_max');
     else
-        save(['updateMeeting\' fileName ext],'inName','outName','tsimWind','kFinal','refWind','Ts','controlParams', 'out', ...
+        save(['outputData2c\' fileName ext],'inName','outName','tsimWind','kFinal','refWind','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag');
     end
 end

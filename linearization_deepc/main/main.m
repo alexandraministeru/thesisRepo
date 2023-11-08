@@ -44,26 +44,31 @@ addpath(genpath('D:\Program Files\MATLAB\R2023a\yalmip')) % yalmip
 % 
 % save('inputData\linData.mat','VTK','FAST_linData','LTIsys','matData','MBC');
 
-load('inputData\linData.mat');
-% load('inputData\linDataWave.mat');
+% load('inputData\linData.mat');
+load('inputData\linDataWave.mat');
+load('inputData\waveForces.mat');
 
 %% Find index of blade pitch, gen speed and wind speed
 inputChannelsList = MBC.DescCntrlInpt;
 outputChannelsList = MBC.DescOutput;
 
 inputChannels = {'ED Extended input: collective blade-pitch command, rad', ...
-    'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s'};
+    'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s',...
+    'ED Platform Y moment, node 1, Nm'};
+
+% inputChannels = {'ED Extended input: collective blade-pitch command, rad', ...
+%     'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s'};
 % outputChannels = {'ED GenSpeed, (rpm)'};
 outputChannels = {'ED RotSpeed, (rpm)'};
 
 LTIsys_reduced = getReducedSS(MBC,LTIsys,inputChannels,outputChannels);
 
-% Set input, output and state names
-LTIsys_reduced.InputName = {'Collective blade pitch (\theta_c)', 'Horizontal wind speed (v_0)'};
-LTIsys_reduced.InputUnit = {'rad','m/s'};
-% LTIsys_reduced.OutputName = {'Generator speed (\Omega_g)'};
-LTIsys_reduced.OutputName = {'Rotor speed (\Omega)'};
-LTIsys_reduced.OutputUnit = {'rpm'};
+% % Set input, output and state names
+% LTIsys_reduced.InputName = {'Collective blade pitch (\theta_c)', 'Horizontal wind speed (v_0)'};
+% LTIsys_reduced.InputUnit = {'rad','m/s'};
+% % LTIsys_reduced.OutputName = {'Generator speed (\Omega_g)'};
+% LTIsys_reduced.OutputName = {'Rotor speed (\Omega)'};
+% LTIsys_reduced.OutputUnit = {'rpm'};
 
 %% Discretize and get OL data
 % Discretize system
@@ -92,7 +97,7 @@ u_windSpeed = windData(1:size(u_bladePitch,1));
 % % Can replace wind disturbance:
 % u_windSpeed = zeros(size(u_bladePitch)); % no wind disturbance
 
-u = [u_bladePitch u_windSpeed];
+u = [u_bladePitch u_windSpeed zeros(size(u_windSpeed))];
 
 figure
 plot(t,u_bladePitch)
@@ -130,7 +135,7 @@ end
 
 % std = 0.1; % measurement noise standard deviation
 % std = 0.01; % measurement noise standard deviation for rotor speed control
-std = 5e-5;
+std = 5e-3;
 std = std*noiseFlag;
 y = y + std.*randn(size(y));
 
@@ -234,7 +239,7 @@ out = zeros(nOutputs,kFinal);
 % White noise
 % v = windData(size(u_windSpeed,1)+1:end); 
 
-% Extreme operating gust
+% % Extreme operating gust
 % load('inputData\eog_16mps.mat','Wind1VelX','Time')
 % v = interp1(Time,Wind1VelX,tsim)'; % resample with current sampling period
 % v = v-16; % center around linearization point
@@ -244,6 +249,8 @@ out = zeros(nOutputs,kFinal);
 load('inputData\turbWind_16mps.mat') %turbulent wind obtained from a previous FAST simulation
 v = windData;
 v = v-16; % center around linearization point
+
+Mp = M_pitch;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Ts = 1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % load('inputData\eog_16mps.mat','Wind1VelX','Time')
@@ -282,7 +289,7 @@ ivFlag = 1;
 
 if ivFlag == 1  
     % weightOutputs = 5e-3*diag(1); % genspeed
-    weightOutputs = 5e1*diag(1); % rotspeed
+    weightOutputs = 5e-1*diag(1); % rotspeed
 else
     weightOutputs = 1e4*diag(1);
 end
@@ -336,7 +343,8 @@ for k=1:kFinal
     uSeq(:,k) = uStar;
 
     u = [uSeq(:,k);
-        v(k)];
+
+        v(k); Mp(k)];
     
     % Apply optimal input, simulate output
     x(:,k+1) = sys_d.A*x(:,k) + sys_d.B*u;
@@ -419,15 +427,15 @@ set(gcf,'Color','White')
 %     saveFlag = 0;
 % end
 
-saveFlag = 0;
+saveFlag = 1;
 
 if saveFlag == 1
-    simType = 'eogWindRot';    
-    simType = 'aa';  
+    simType = 'turb';  
     % simType = 'turbWind';
     inName = '\theta_c (in deg)';
     % outName = 'Generator speed (in rpm)';
     outName = 'Rotor speed (in rpm)';
+
     scaledFlag = 0;
     tuning = 0;
     tunedVar = 'Q';
@@ -475,7 +483,7 @@ if saveFlag == 1
     end
 
     % Check if file name already exists (can go up to filename19.mat)
-    while isfile(['outputData\' fileName ext])
+    while isfile(['masterMeeting\' fileName ext])
         if isstrprop(fileName(end),'digit')
             currIdx = str2double(fileName(end));
             fileName = [fileName(1:end-1) num2str(currIdx+1)];
@@ -486,10 +494,10 @@ if saveFlag == 1
 
     % Save variables
     if scaledFlag == 1
-        save(['outputData\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
+        save(['masterMeeting\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag','uhat_max','ehat_max');
     else
-        save(['outputData\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
+        save(['masterMeeting\' fileName ext],'inName','outName','tsim','kFinal','ref','Ts','controlParams', 'out', ...
             'uSeq','description','scaledFlag');
     end
 end
