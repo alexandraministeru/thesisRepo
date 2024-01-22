@@ -6,13 +6,30 @@ rng('default')
 %% Set matlab-toolbox path
 addpath(genpath('..\matlab-toolbox'));
 addpath(genpath('..\matlab-toolbox\Utilities'));
+addpath(genpath('functions'))
 %% Set data files
 % Output file of linearization
 outFileOP = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.out';
 
 % Output file of simulation to compare against
-outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.out';
+
+% Linearization simulation
+% outFile = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_ModLin.SFunc.out';
+
+% Turbulent wind, still water
 % outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simTurb\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+
+% Steady wind, Hs=3, Tp=12
+% outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs3_tp12\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+
+% Turbulent wind, Hs=3, Tp=12
+% outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs3_tp12_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+
+% Steady wind, Hs=4.3, Tp=10
+% outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs4p3_tp10\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+
+% Turbulent wind, Hs=4.3, Tp=10
+outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs4p3_tp10_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 
 %% Load linearization
 FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
@@ -24,7 +41,8 @@ cd ../main
 inputChannelsList = MBC.DescCntrlInpt;
 inputChannels = {'IfW Extended input: horizontal wind speed (steady/uniform wind), m/s', ...
     'ED Generator torque, Nm', ...
-    'ED Extended input: collective blade-pitch command, rad'};
+    'ED Extended input: collective blade-pitch command, rad',...
+    'ED Platform Y moment, node 1, Nm'};
 
 nIn = length(inputChannels);
 nOut = length(MBC.DescOutput);
@@ -41,6 +59,7 @@ for idx = 1:nIn
 end
 
 LTIsys_reduced = ss(MBC.AvgA,B_reduced,MBC.AvgC,D_reduced);
+% LTIsys_reduced = c2d(LTIsys_reduced,0.05);
 
 %% Check stability
 isstable(LTIsys_reduced)
@@ -61,7 +80,8 @@ U = zeros(nIn,length(T));
 
 inputChannels = {'Wind1VelX',... % Horizontal wind speed (m/s)
     'GenTq',... % Generator torque (kN-m)
-    'BldPitch1'}; % Collective blade pitch (assumes all blades received the same input) (deg)
+    'BldPitch1', ... % Collective blade pitch (assumes all blades received the same input) (deg)
+    'B1WvsMyi'}; % Nm
 
 for idxCh = 1:length(inputChannels)
     U(idxCh,:) = data(1:end,ismember(channels,inputChannels{idxCh}))';
@@ -94,10 +114,18 @@ U(2,:) = U(2,:).*1e3; % Generator torque from kN-m to N-m
 U(3,:) = deg2rad(U(3,:)); % Blade pitch from deg to rad
 
 %% Set initial condition
-% TODO?
+XINIT = zeros(length(matData.Avgxop)-1,1);
+XINIT(1) = data(1,30) - matData.Avgxop(1);
+XINIT(2) = deg2rad(data(1,34)) - matData.Avgxop(2);
+XINIT(3) = data(1,27) - matData.Avgxop(3);
+% XINIT(1:3) = matData.Avgxop(1:3);
+XINIT(4:6) = matData.Avgxop(5:7); % Set the derivative initial states
+% XINIT(8:end) = matData.Avgxop(9:end);
 
 %% Simulate linearization
 % x = zeros(nStates,size(data,1)+1);
+x = zeros(length(XINIT),size(data,1)+1);
+% x(:,1) = XINIT;
 % Y = zeros(size(data,2)-1,size(data,1));
 % 
 % for k=1:size(data,1)
@@ -106,16 +134,19 @@ U(3,:) = deg2rad(U(3,:)); % Blade pitch from deg to rad
 % end
 % 
 % Y = Y';
-Y = lsim(LTIsys_reduced,U,T);
+
+[Y,tSim,xSim] = lsim(LTIsys_reduced,U,T,XINIT);
+% Y(:,35) = -Y(:,35);
 
 %% Select plotting channels
 % Noninear plot channels
-plotChannels = {'RotSpeed','GenSpeed','BldPitch1','PtfmPitch'};
+plotChannels = {'RotSpeed','PtfmPitch','TwrBsMyt'};
+% ,'BldPitch1','GenSpeed',
 
 % Linear plot channels
 channelsLin = MBC.DescOutput;
-plotChannelsLin = {'ED RotSpeed, (rpm)','ED GenSpeed, (rpm)','ED BldPitch1, (deg)','ED PtfmPitch, (deg)'};
-
+plotChannelsLin = {'ED RotSpeed, (rpm)','ED PtfmPitch, (deg)','ED TwrBsMyt, (kN-m)'};
+% ,'ED BldPitch1, (deg)','ED GenSpeed, (rpm)'
 %% Add back linearization point
 % Find steady state operating value
 nChannels = length(plotChannels);
@@ -126,19 +157,24 @@ end
 
 %% Plot list of selected channels
 nPlots = length(plotChannels);
-
+figure()
 for ip = 1:nPlots
     % Find index of plot channel within data
     id = find(ismember(channels,plotChannels{ip}));
     idLin = find(ismember(channelsLin,plotChannelsLin{ip}));
-    figure()
-    plot(T, data(:,id))
+    subplot(nPlots,1,ip)    
+    plot(T, data(:,id),'k','LineWidth',1)
     hold on
-    plot(T, Y(:,idLin) + opVal(ip))
-    xlabel('Time (s)')
+    plot(T, Y(:,idLin) + opVal(ip),'r','LineWidth',1)
+    xlabel('Time (in s)')
     ylabel([channels{id} ' ' units{id}])
-    xlim([0 T(end)])
+    xlim([500 1200])
     legend('Nonlinear model','Linearization','Location','SouthEast')
     grid on
     set(gcf,'Color','White')
+    rmse(data(10000:end,id), Y(10000:end,idLin) + opVal(ip))
+    vaf(data(10000:end,id), Y(10000:end,idLin) + opVal(ip)) 
 end
+
+%%
+
