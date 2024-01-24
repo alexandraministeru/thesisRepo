@@ -38,7 +38,7 @@ yini = data.yini;
 pIn = size(Up,1);
 pOut = size(Yp,1);
 fIn = size(Uf,1);
-% fOut = size(Yf,1);
+fOut = size(Yf,1);
 
 if previewFlag == 1
     Wp = data.Wp;
@@ -103,25 +103,35 @@ if method == 1 || method == 2  % QP or SDP
     Aineq = [zeros(size(A,1),length(g)) A;
          zeros(size(A,1),length(g)) -A];
      
-    bineq = [b(1) + data.uini(end); %TBD MIMO
-            b(2:end);
-            b(1) - data.uini(end);
-            b(2:end)];   
+    bineq = [b(1:nInputs) + data.uini(end-nInputs+1:end); 
+            b(nInputs+1:end);
+            b(1:nInputs) - data.uini(end-nInputs+1:end);
+            b(nInputs+1:end);];   
 
     % Input constraints
     A_lbu = -[zeros(fIn,length(g)) eye(fIn)];
     A_ubu = [zeros(fIn,length(g)) eye(fIn)];
 
+    A_lby = -[Yf*Z' zeros(fOut,fIn)];
+    A_uby = [Yf*Z' zeros(fOut,fIn)];
+
     Aineq = [Aineq;
              A_lbu;
-             A_ubu];
+             A_ubu;
+             A_lby;
+             A_uby];
 
     b_lbu = -kron(ones(f,1), controlParams.lbu);
     b_ubu = kron(ones(f,1), controlParams.ubu);
 
+    b_lby = -kron(ones(f,1), controlParams.lby);
+    b_uby = kron(ones(f,1), controlParams.uby);
+
     bineq = [bineq;
              b_lbu;
-             b_ubu]; 
+             b_ubu;
+             b_lby;
+             b_uby]; 
 
     if method == 1 % QP
 
