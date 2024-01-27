@@ -14,7 +14,7 @@ GK = 1.0/( 1.0 + prevPitCom/KK );
 uhat_max = deg2rad(10);
 minPit  = deg2rad(-10)/uhat_max;
 maxPit  = deg2rad(10)/uhat_max;
-maxRate = deg2rad(8)/uhat_max;
+maxRate = deg2rad(5)/uhat_max;
 
 err = measOutput - ref;
 intErr = prevIntErr + err*Ts;

@@ -33,6 +33,10 @@ uAmpSpectrum(2:end-1) = 2*uAmpSpectrum(2:end-1); % Compensate for truncated freq
 
 % PSD estimate
 uPSD = pow2db(2.*(abs(uFFT(1:N/2+1)).^2/(N*fs)));
+% uPSD = 2.*(abs(uFFT(1:N/2+1)).^2/(N*fs));
+
+% Power spectrum
+% uPSD = (abs(uAmpSpectrum).^2)/(N*fs);
 
 % figure
 % periodogram(u,rectwin(N),N,fs)

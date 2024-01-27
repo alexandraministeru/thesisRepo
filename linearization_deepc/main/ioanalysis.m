@@ -203,10 +203,21 @@ set(gcf,'Color','White')
 % condition_number1 = max(diag(singular_values))/min(diag(singular_values))
 
 %% PSD waves
-% Ts = 0.05;
-% [f_Fsg,fft_Fsg,psd_Fsg] = getFFT(Ts,F_surge);
-% [f_Mp,fft_Mp,psd_Mp] = getFFT(Ts,M_pitch);
-% tsim = 0:Ts:Ts*(numel(F_surge)-1);
+Ts = 0.05;
+[f_Fsg,fft_Fsg,psd_Fsg] = getFFT(Ts,F_surge);
+[f_Mp,fft_Mp,psd_Mp] = getFFT(Ts,M_pitch);
+tsim = 0:Ts:Ts*(numel(F_surge)-1);
+
+figure
+plot(f_Fsg,psd_Fsg)
+xlim([0 1])
+hold on
+pwelch(F_surge,[],[],[],1/Ts)
+hold on
+periodogram(F_surge,rectwin(length(F_surge)),length(F_surge),1/Ts)
+xlim([0 1])
+
+
 % 
 % figure
 % plot(f_Mp(find(f_Mp==0):end),psd_Mp(find(f_Mp==0):end),'k-','LineWidth',0.8)
