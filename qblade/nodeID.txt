@@ -1,0 +1,33 @@
+
+Searching for license files [*.lic] in the QBlade-EE directory:
+D:\Master\TUD\Y2\Thesis\QBladeEE_2.0.6.1_Amr\MATLAB_Files\ffControl
+
+Issues:
+ - license : ERROR - No license file(s) found
+
+A nodeID.dat file containing the hardware information has been created in the QBlade directory!
+To obtain a valid license contact license@qblade.org. For a node-locked license provide the node 
+information below, or the nodeID.dat file to: license@qblade.org
+
+================================================================
+Node ID             : AE+X-KZgA-AAA=
+Host                : DPHT-80I669Q
+System              : Windows 10 Version 2009
+Cpu                 : Intel(R) Core(TM) i5-5200U CPU @ 2.20GHz
+Bios vendor         : LENOVO
+System vendor       : LENOVO
+Cpu Vendor (dmi)    : Intel(R) Corporation
+Cpu Cores  (dmi)    : 2
+Virtualiz. class    : No virtualization
+Virtualiz. detail   : No virtualization
+Cloud provider      : Provider unknown
+Network adapter [0] : Intel(R) Ethernet Connection (3) I218-V
+     ip address [0-0-0-0]
+    mac address [68:f7:28:ce:2:6a]
+Network adapter [0] : Bluetooth Device (Personal Area Network) #3
+     ip address [0-0-0-0]
+    mac address [3c:9c:f:47:c8:49]
+Network adapter [0] : Fortinet Virtual Ethernet Adapter (NDIS 6.30)
+     ip address [0-0-0-0]
+    mac address [0:9:f:fe:0:1]
+================================================================
