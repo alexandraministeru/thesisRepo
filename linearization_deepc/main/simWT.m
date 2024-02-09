@@ -35,13 +35,13 @@ filenameIW  = [base     '_IW.dat']             ; % New InflowWind file relative 
 % Modify parameters of inflow wind file
 
 % % Steady wind
-% paramIW_mod = SetFASTPar(paramIW    ,'WindType'  ,1); % Steady wind
-% paramIW_mod = SetFASTPar(paramIW_mod,'HWindSpeed',16); % Set wind speed
+paramIW_mod = SetFASTPar(paramIW    ,'WindType'  ,1); % Steady wind
+paramIW_mod = SetFASTPar(paramIW_mod,'HWindSpeed',16); % Set wind speed
 
 % % Turbulent wind
-paramIW_mod = SetFASTPar(paramIW    ,'WindType'  ,3); % Turbulent wind
-paramIW_mod = SetFASTPar(paramIW_mod,'HWindSpeed',16); % Set wind speed
-paramIW_mod = SetFASTPar(paramIW_mod,'FileName_BTS','"..\5MW_Baseline\Wind\90m_16mps.bts"');
+% paramIW_mod = SetFASTPar(paramIW    ,'WindType'  ,3); % Turbulent wind
+% paramIW_mod = SetFASTPar(paramIW_mod,'HWindSpeed',16); % Set wind speed
+% paramIW_mod = SetFASTPar(paramIW_mod,'FileName_BTS','"..\5MW_Baseline\Wind\90m_16mps.bts"');
 
 % Write the new inflow wind file
 Matlab2FAST(paramIW_mod, templateFilenameIW, fullPathIW, 2); %contains 2 header lines
@@ -166,7 +166,7 @@ FP_mod = SetFASTPar(FP_mod,'AeroFile',['"' filenameAeroDyn '"']);
 FP_mod = SetFASTPar(FP_mod,'ServoFile',['"' filenameServoDyn '"']);
 
 %% Set simulation time
-TMax = 2000; % seconds
+TMax = 3000; % seconds
 FP_mod = SetFASTPar(FP_mod,'TMax',TMax);
 
 %% Write FST file

@@ -114,8 +114,8 @@ save('reducedSS\bp_tg_fsurg_mpitch_rotsp_ptfmp_twrmyt.mat','LTIsys_reduced');
 load('reducedSS\bp_tg_fsurg_mpitch_rotsp_ptfmp_twrmyt.mat');
 
 %% Separte transfer functions
-G_hat = LTIsys_reduced(1:3,1:2);
-Gd_hat = LTIsys_reduced(1:3,3:5);
+G_hat = LTIsys_reduced(1:2,1:2);
+Gd_hat = LTIsys_reduced(1:2,3:5);
 
 %% Scale transfer functions(G_hat, Gd_hat - unscaled; G, Gd scaled)
 % Scaling factors
@@ -134,31 +134,31 @@ mytHat_max = 0.5*opVal_Myt;
 Du = diag([uhat_max tghat_max]);
 Dd = diag([FsurgeHat_max vhat_max MpitchHat_max]);
 % Dy = diag([omegaHat_max pltfmPitchHat_max]);
-Dy = diag([omegaHat_max pltfmPitchHat_max mytHat_max]);
+Dy = diag([omegaHat_max pltfmPitchHat_max]);% mytHat_max]);
 
 
 % Scaled transfer functions
 G = Dy\G_hat*Du;
 Gd = Dy\Gd_hat*Dd;
 
-% Set input, output and state names for G
-G.InputName = {'Collective blade pitch (\theta_c)', ...
-    'Generator torque (\tau_g)'}; 
-G.InputUnit = {'-','-'};
-% G.OutputName = {'Rotor speed (\Omega)','Platform pitch angle'};
-% G.OutputUnit = {'-','-'};
-G.OutputName = {'Rotor speed (\Omega)','Platform pitch angle (\Theta_p)', 'Tower bending moment (M_{y,T})'};
-G.OutputUnit = {'-','-','-'}; 
-
-% Set input, output and state names for Gd
-Gd.InputName = {'Wave surge force (F_{x,P})', ...
-    'Horizontal wind speed (v)', ...
-    'Wave pitch moment (M_{y,P})'}; 
-Gd.InputUnit = {'-','-','-'};
-% Gd.OutputName = {'Rotor speed (\Omega)','Platform pitch angle'};
-% Gd.OutputUnit = {'-','-'};
-Gd.OutputName = {'Rotor speed (\Omega)','Platform pitch angle (\Theta_p)', 'Tower bending moment (M_{y,T})'};
-Gd.OutputUnit = {'-','-','-'}; 
+% % Set input, output and state names for G
+% G.InputName = {'Collective blade pitch (\theta_c)', ...
+%     'Generator torque (\tau_g)'}; 
+% G.InputUnit = {'-','-'};
+% % G.OutputName = {'Rotor speed (\Omega)','Platform pitch angle'};
+% % G.OutputUnit = {'-','-'};
+% G.OutputName = {'Rotor speed (\Omega)','Platform pitch angle (\Theta_p)', 'Tower bending moment (M_{y,T})'};
+% G.OutputUnit = {'-','-','-'}; 
+% 
+% % Set input, output and state names for Gd
+% Gd.InputName = {'Wave surge force (F_{x,P})', ...
+%     'Horizontal wind speed (v)', ...
+%     'Wave pitch moment (M_{y,P})'}; 
+% Gd.InputUnit = {'-','-','-'};
+% % Gd.OutputName = {'Rotor speed (\Omega)','Platform pitch angle'};
+% % Gd.OutputUnit = {'-','-'};
+% Gd.OutputName = {'Rotor speed (\Omega)','Platform pitch angle (\Theta_p)', 'Tower bending moment (M_{y,T})'};
+% Gd.OutputUnit = {'-','-','-'}; 
 
 %% Bode plots
 fWaveMin = 0.05;
@@ -197,10 +197,41 @@ set(gcf,'Color','White')
 
 %% Conditioning number, RGA, SVD
 
-% G_freq = evalfr(tf(G),0*j)
+% G_freq = evalfr(tf(G),(1/12))
 % RGA1 = G_freq.*pinv(G_freq).'
 % [U,singular_values,V] = svd(G_freq)
 % condition_number1 = max(diag(singular_values))/min(diag(singular_values))
+freqs = logspace(-2,0);
+RGAvec = zeros(2,2,length(freqs));
+cnVec = zeros(length(freqs),1);
+sgVals = zeros(2,2,length(freqs));
+
+for idxFreqs = 1:length(freqs)
+    G_freq = evalfr(tf(G),freqs(idxFreqs));
+    RGAvec(:,:,idxFreqs) = G_freq.*pinv(G_freq).';
+    [U,sgVals(:,:,idxFreqs),V] = svd(G_freq);
+    cnVec(idxFreqs) = max(diag(sgVals(:,:,idxFreqs)))/min(diag(sgVals(:,:,idxFreqs)));
+end
+
+figure
+semilogx(freqs,squeeze(RGAvec(1,1,:)))
+hold on
+semilogx(freqs,squeeze(RGAvec(1,2,:)))
+xline(fWaveMin,'k--','WaveMin','LabelVerticalAlignment','bottom','LineWidth',0.3)
+xline(fWaveMax,'k--','WaveMax','LabelVerticalAlignment','bottom','LineWidth',0.3)
+grid on
+legend('From \theta_c to \Omega', 'From \tau_g to \Omega')
+
+figure
+semilogx(freqs,cnVec)
+
+figure
+semilogx(freqs,max(diag(sgVals)))
+hold on
+semilogx(freqs,min(diag(sgVals)))
+grid on
+
+
 
 %% PSD waves
 Ts = 0.05;

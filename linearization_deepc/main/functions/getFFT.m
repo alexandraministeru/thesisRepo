@@ -16,10 +16,10 @@ function [f,uAmpSpectrum,uPSD] = getFFT(Ts,u)
 
 N = max(size(u));
 fs = 1/Ts; % Sampling frequency (in Hz)
-f = fs/2*linspace(0,1,N/2+1); % frequencies vector
+f = fs/2*linspace(0,1,floor(N/2)+1); % frequencies vector
 uFFT = fft(u);
 uAmpSpectrum = abs(uFFT/N); % Normalize and extract amplitude only
-uAmpSpectrum = uAmpSpectrum(1:N/2+1); % Truncate negative frequencies
+uAmpSpectrum = uAmpSpectrum(1:floor(N/2)+1); % Truncate negative frequencies
 uAmpSpectrum(2:end-1) = 2*uAmpSpectrum(2:end-1); % Compensate for truncated frequencies, DC component and Nyquist frequency do not occur twice
 
 % figure
@@ -32,11 +32,11 @@ uAmpSpectrum(2:end-1) = 2*uAmpSpectrum(2:end-1); % Compensate for truncated freq
 % set(gcf,'Color','White')
 
 % PSD estimate
-uPSD = pow2db(2.*(abs(uFFT(1:N/2+1)).^2/(N*fs)));
-% uPSD = 2.*(abs(uFFT(1:N/2+1)).^2/(N*fs));
+uPSD = pow2db(2.*(abs(uFFT(1:floor(N/2)+1)).^2/(N*fs)));
 
 % Power spectrum
 % uPSD = (abs(uAmpSpectrum).^2)/(N*fs);
+% uPSD = 2.*(abs(uFFT(1:N/2+1)).^2/(N*fs));
 
 % figure
 % periodogram(u,rectwin(N),N,fs)

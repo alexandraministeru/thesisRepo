@@ -339,7 +339,7 @@ for k=1:kFinal
     end
 
     % DeePC optimal control input
-    uStar = deepc(data,rf,controlParams,method,ivFlag,previewFlag);
+    uStar = deepc2(data,rf,controlParams,method,ivFlag,previewFlag);
     uSeq(:,k) = uStar;
 
     u = [uSeq(:,k);
@@ -427,7 +427,7 @@ set(gcf,'Color','White')
 %     saveFlag = 0;
 % end
 
-saveFlag = 1;
+saveFlag = 0;
 
 if saveFlag == 1
     simType = 'turb';  

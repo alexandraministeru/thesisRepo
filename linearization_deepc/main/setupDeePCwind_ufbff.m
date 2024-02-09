@@ -1,4 +1,4 @@
-function [dataWind,controlParamsWind] = setupDeePCwind(G,Ts)
+function [dataWind,controlParamsWind] = setupDeePCwind_ufbff(G,Ts)
 % Scaling factors
 uhat_max = 10*(pi/180); % Maximum expected input (rad)
 v0hat_max = 0.1*16; % Maximum expected wind disturbance (m/s)

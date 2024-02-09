@@ -119,35 +119,88 @@ file2 = 'outputData\turbWindRot_preview_QP_tuningp2.mat';
 % file2='outputData\eogWindRot_preview_QP2.mat';
 
 %%%%%%%masterMeeting%%%%%%%%%
-file1='masterMeeting\eog_noPreview_QP.mat';
-file2='masterMeeting\eog_preview_QP.mat';
+% file1='masterMeeting\eog_noPreview_QP.mat';
+% file2='masterMeeting\eog_preview_QP.mat';
 
-file1='masterMeeting\turb_noPreview_QP.mat';
-file2='masterMeeting\turb_preview_QP.mat';
+% file1='masterMeeting\turb_noPreview_QP.mat';
+% file2='masterMeeting\turb_preview_QP.mat';
+% 
+% file1='masterMeeting\wave_noPreview_QP_scaled1.mat';
+% file2='masterMeeting\wave_Mp_preview_QP_scaled1.mat';
 
-file1='masterMeeting\wave_noPreview_QP_scaled.mat';
-file2='masterMeeting\wave_Mp_preview_QP_scaled.mat';
+% Turbwind added on wave preview
+file1='masterMeeting\wave_Mp_preview_QP_scaled1.mat';
+file2='masterMeeting\wave_Mp_preview_QP_scaled3.mat';
+
+% 2xdeepc vs deepc2xd
+file1='masterMeeting\wave_Mp_preview_QP_scaled1.mat';
+file2='masterMeeting\wave_Mp_preview_QP_scaled3.mat';
 
 % file1='masterMeeting\wave2x_noPreview_QP_scaled.mat';
 % file2='masterMeeting\wave2x_Fsg_Mp_preview_QP_scaled.mat';
 
-file1='updateMeeting\sim1_Fsg_preview_QP_scaled.mat'
-file2='updateMeeting\sim2_Fsg_preview_QP_scaled.mat'
-file3='updateMeeting\sim3_Fsg_preview_QP_scaled.mat'
-file4='updateMeeting\sim4_Fsg_preview_QP_scaled.mat'
+% file1='updateMeeting\sim1_Fsg_preview_QP_scaled.mat'
+% file2='updateMeeting\sim2_Fsg_preview_QP_scaled.mat'
+% file3='updateMeeting\sim3_Fsg_preview_QP_scaled.mat'
+% file4='updateMeeting\sim4_Fsg_preview_QP_scaled.mat'
+% 
+% file1='updateMeeting\wave_noPreview_QP_scaled.mat';
+% file1='updateMeeting\wave_Mp_preview_QP_scaled.mat';
+% file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
+% 
+% 
+% file1='updateMeeting\wave_wind_noPreview_QP_scaled.mat';
+% file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
+% file3='updateMeeting\wave_wWind_Fsg_Mp_preview_QP_scaled.mat';
 
-file1='updateMeeting\wave_noPreview_QP_scaled.mat';
-file1='updateMeeting\wave_Mp_preview_QP_scaled.mat';
-file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
+%%%%%%%%%%%%%%%% Update meeting 24.11 %%%%%%%%%%%%%%%%%%%%%%%%%
+file1 = 'updateMeeting2\wave_ptfmPitch_unbounded_noPreview_QP_scaled.mat';
+file2 = 'updateMeeting2\wave_ptfmPitch_unbounded_Mp_preview_QP_scaled.mat';
+file3 = 'updateMeeting2\wave_ptfmPitch_bounded_noPreview_QP_scaled.mat';
+file4 = 'updateMeeting2\wave_ptfmPitch_bounded_Mp_preview_QP_scaled.mat';
 
+file1 = 'updateMeeting2\wave_ptfmPitch_unbounded_noPreview_QP_scaled.mat';
+file2 = 'updateMeeting2\wave_ptfmPitch_bounded_noPreview_QP_scaled.mat';
+file3 = 'updateMeeting2\wave_ptfmPitch_bounded_Mp_preview_QP_scaled.mat';
 
-file1='updateMeeting\wave_wind_noPreview_QP_scaled.mat';
-file2='updateMeeting\wave_wWind_Mp_preview_QP_scaled.mat';
-file3='updateMeeting\wave_wWind_Fsg_Mp_preview_QP_scaled.mat';
+% file1 = 'updateMeeting2\wave_ptfmPitch_bounded_noPreview_QP_scaled1.mat';
+% file2 = 'updateMeeting2\wave_ptfmPitch_bounded_Mp_preview_QP_scaled1.mat';
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+file1='updateMeeting2\wave_ptfmPitch_unbounded_noPreview_QP_scaled.mat';
+file2='updateMeeting2\wave_ptfmPitch_unbounded_Mp_preview_QP_scaled1.mat';
 
+file1 = 'updateMeeting3\wave_ptfmPitch_unbounded_noPreview_QP_scaled2.mat';
+% file2='updateMeeting3\wave_ptfmPitch_bounded_noPreview_QP_scaled1.mat';
+file3='updateMeeting3\wave_ptfmPitch_bounded_Mp_preview_QP_scaled1.mat';
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% final tsts
+file1=('finalTests\tg_Mp_preview_QP_scaled.mat')
+file2=('finalTests\tg_Mp_preview_QP_scaled1.mat')
 
+% file0 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar1.mat';
+% file1 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar2.mat';
+% file2 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar3.mat';
+% file3 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar4.mat';
+% file4 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar5.mat';
+% file5 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar6.mat';
+% file6 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar7.mat';
+% file7 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar8.mat';
+% file8 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar9.mat';
+% file9 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar10.mat';
+% file10 = 'noiseVar\steadyWind_irrWaves_Hs3Tp12_noiseVar_Mp_preview_QP_scaled_tuningvar11.mat';
+
+% file10,file7,file3,file1
+
+file0 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar.mat';
+file1 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar1.mat';
+file2 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar2.mat';
+file3 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar3.mat';
+file4 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar4.mat';
+file5 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar5.mat';
+file6 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar6.mat';
+file7 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar7.mat';
+file8 = 'previewBias\steadyWind_irrWaves_Hs3Tp12_previewNoise_Mp_preview_QP_scaled_tuningvar8.mat';
 
 % % % Update data structure for old data files
 % inName = '\theta_c (in deg)';
@@ -162,9 +215,12 @@ file3='updateMeeting\wave_wWind_Fsg_Mp_preview_QP_scaled.mat';
 % "-append")
 % save(file2,'kFinal',"-append")
 
-plotComp(file1,file2)%,file3)%,file4)%,file5)%,file6)%,file7)
-% plotComp(file1,file2,file3)%,file4)%,file5)%,file6)%,file7)
+% plotComp(file1,file2)%,file3)%,file4)%,file5)%,file6)%,file7)
+% plotComp(file1,file2,file3,file4,file5)%,file6)%,file7)
 % plotComp(file1,file2,file3,file4)%,file5)%,file6)%,file7)
+% plotComp(file0,file1,file2,file3,file4,file5,file6,file7,file8)%,file7,file8,file9,file10)
+plotComp(file8,file7,file6,file5,file4,file3,file2,file1,file0)%,file7,file8,file9,file10)
+% plotComp(file10,file6,file3,file1)
 % Required fields in data files: 
 % inName: name and measurement unit of control input
 % outName: name and measurement unit of controlled output
@@ -210,6 +266,7 @@ Ts = data{1}.Ts;
 f = data{1}.controlParams.f;
 legendStr = cell(nFiles,1);
 RMSE = zeros(nFiles,1);
+colorVec = {'k','r','b','g','m','y','#33A0C3','#904FF2','#EB018F','#34EBCC'};
 
 contentAns = input(['Plot comparison type:\n1 - No preview VS Preview\n' ...
     '2 - Different preview components\n' ...
@@ -234,47 +291,72 @@ for idxOut = 1:nFiles
     end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Output plot %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure
 for idxOut = 1:nFiles
-    % Reconstruct data if it was scaled
-    if data{idxOut}.scaledFlag == 1
-        data{idxOut}.out = data{idxOut}.out.*data{idxOut}.ehat_max;
-    end
-    plot(data{idxOut}.tsim,data{idxOut}.out,'LineWidth',1);   
-    RMSE(idxOut) = sqrt(norm(data{idxOut}.out)^2/length(data{idxOut}.out));
-    hold on
+    stds(idxOut) = data{idxOut}.controlParams.previewNoiseStd;
+    norms(idxOut) = data{idxOut}.info.normE;
 end
-xlabel('Time (in s)')
-ylabel(data{1}.outName)
-title('DeePC for reference tracking')
-grid on
+
+figure
+semilogx(stds.^2, norms,'k','LineWidth',1)
 hold on
-plot(data{1}.tsim,data{1}.ref(1:kFinal)) % reference
-xline(Ts*f,'k--','Future window size')
-% stepIdxs = find(data{1}.ref);
-% xline(Ts*stepIdxs(1),'k--','Reference step')
-switch contentAns
-    case 1
-        legend('No preview','With preview','Reference','Location','SouthEast')
-    case {2,3}
-        legend(legendStr,'Location','SouthEast')
-    case 4
-        legend('Not scaled','Scaled','Reference','Location','SouthEast')
-end
+ylabel('||\omega_{err}||_2')
+xlabel('var(d_k)')
+grid on
 set(gcf,'Color','White')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Output plot %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+nOutputs = size(data{idxOut}.out,1);
+for idxNumOutput = 1:2
+    figure
+    for idxOut = 1:nFiles
+        % Reconstruct data if it was scaled
+        if data{idxOut}.scaledFlag == 1
+            data{idxOut}.ehat_max = diag(data{idxOut}.Dy);
+            data{idxOut}.out(idxNumOutput,:) = data{idxOut}.out(idxNumOutput,:).*data{idxOut}.ehat_max(idxNumOutput);
+        end
+        plot(data{idxOut}.tsim, 12.1+data{idxOut}.out(idxNumOutput,:),'LineWidth',1,Color=colorVec{idxOut});
+        disp(legendStr{idxOut});rmse(data{idxOut}.out(idxNumOutput,20:end), zeros(length(data{idxOut}.out(idxNumOutput,20:end)),1)')
+        hold on
+    end
+    xlabel('Time (in s)')
+    ylabel(data{1}.outName(idxNumOutput))
+    title('DeePC for reference tracking')
+    grid on
+    hold on
+    % plot(data{1}.tsim,data{1}.ref(idxNumOutput:nOutputs:end)+12.1) % reference
+    % xline(Ts*f,'k--','Future window size')
+    if data{idxOut}.scaledFlag == 1
+        yline(data{idxOut}.controlParams.lby(idxNumOutput)*data{idxOut}.ehat_max(idxNumOutput)+12.1,'r--','LineWidth',1)
+        yline(data{idxOut}.controlParams.uby(idxNumOutput)*data{idxOut}.ehat_max(idxNumOutput)+12.1,'r--','LineWidth',1)
+    else
+        yline(data{idxOut}.controlParams.lby(idxNumOutput),'r--','LineWidth',1)
+        yline(data{idxOut}.controlParams.uby(idxNumOutput),'r--','LineWidth',1)
+    end
+    % stepIdxs = find(data{1}.ref);
+    % xline(Ts*stepIdxs(1),'k--','Reference step')
+    switch contentAns
+        case 1
+            legend('No preview','With preview','Location','SouthEast')
+        case {2,3}
+            legend(legendStr,'Location','SouthEast')
+        case 4
+            legend('Not scaled','Scaled','Location','SouthEast')
+    end
+    set(gcf,'Color','White')
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-disp(RMSE);
+% disp(RMSE);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Input plot %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure
 for idxOut = 1:nFiles
     % Reconstruct data if it was scaled
     if data{idxOut}.scaledFlag == 1
-        plot(data{idxOut}.tsim,rad2deg(data{idxOut}.uSeq.*data{idxOut}.uhat_max));
+        data{idxOut}.uhat_max = diag(data{idxOut}.Du);
+        plot(data{idxOut}.tsim,rad2deg(data{idxOut}.uSeq.*data{idxOut}.uhat_max),'LineWidth',1,Color=colorVec{idxOut});
     else
-        plot(data{idxOut}.tsim,rad2deg(data{idxOut}.uSeq)); 
+        plot(data{idxOut}.tsim,rad2deg(data{idxOut}.uSeq),'LineWidth',1,Color=colorVec{idxOut}); 
     end
     hold on
 end
@@ -310,9 +392,9 @@ figure
 for idxOut = 1:nFiles
     % Reconstruct data if it was scaled
     if data{idxOut}.scaledFlag == 1
-        plot(data{idxOut}.tsim(1:end-1),rad2deg(diff(data{idxOut}.uSeq)*(1/Ts).*data{idxOut}.uhat_max)); 
+        plot(data{idxOut}.tsim(1:end-1),rad2deg(diff(data{idxOut}.uSeq)*(1/Ts).*data{idxOut}.uhat_max),'LineWidth',1,Color=colorVec{idxOut}); 
     else
-        plot(data{idxOut}.tsim(1:end-1),diff(rad2deg(data{idxOut}.uSeq))*(1/Ts)); 
+        plot(data{idxOut}.tsim(1:end-1),diff(rad2deg(data{idxOut}.uSeq))*(1/Ts),'LineWidth',1,Color=colorVec{idxOut}); 
     end
     hold on
 end
@@ -339,6 +421,7 @@ end
 grid on
 set(gcf,'Color','White')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 end
 

@@ -89,19 +89,19 @@ out = zeros(nOutputs,kFinalWind);
 Mp = M_pitch./MpitchHat_max ;
 
 % % Wind:
-% Turbulent wind
-load('inputData\turbWind_16mps.mat') 
-% v = windData;
-v = [windData; windData; windData];
-v = v-16; % center around linearization point
-v = v./v0hat_max;
+% % Turbulent wind
+% load('inputData\turbWind_16mps.mat') 
+% % v = windData;
+% v = [windData; windData; windData];
+% v = v-16; % center around linearization point
+% v = v./v0hat_max;
 
 % EOG
-% load('inputData\eog_16mps.mat','Wind1VelX','Time')
-% v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
-% v = v-16;
-% v = [zeros(500,1); v ; zeros(2000,1)];
-% v = v./v0hat_max;
+load('inputData\eog_16mps.mat','Wind1VelX','Time')
+v = interp1(Time,Wind1VelX,0:Ts_wind:Ts_wind*(600-1))'; % resample with current sampling period
+v = v-16;
+v = [zeros(500,1); v ; zeros(2000,1)];
+v = v./v0hat_max;
 
 % v = zeros(20000,1);
 % Mp = zeros(5000,1);
@@ -140,7 +140,7 @@ for idxWind=1:kFinalWind
 
             % Wave preview
             dataWaves.wf = Mp(idxWaves:idxWaves+controlParamsWaves.f-1);
-            uStarFF = deepc(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
+            uStarFF = deepc2(dataWaves,rfWaves,controlParamsWaves,method,ivFlag,previewFlagWaves);
             uSeqFF(:,idxWind) = uStarFF(1);
 
             idxWaves = idxWaves + 1;
@@ -166,15 +166,15 @@ for idxWind=1:kFinalWind
             % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),avgMeasOutput,prevPitCom,prevIntErr,Ts_wind);
            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-           %%%%%%%%%%%%%%%%%%%% LPF %%%%%%%%%%%%%%%%%%%%
-            % if idxWind > 25
-            %     filteredOutput = lowpass(out(:,idxWind-25:idxWind),3e-3,Ts_wind);
-            % else
-            %     filteredOutput = lowpass(out(:,1:idxWind),3e-3,Ts_wind);
-            % end
-            % 
-            % [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput(end),prevPitCom,prevIntErr,Ts_wind);
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+           % %%%%%%%%%%%%%%%%%%% LPF %%%%%%%%%%%%%%%%%%%%
+           %  if idxWind > 25
+           %      filteredOutput = lowpass(out(:,idxWind-25:idxWind),3e-3,Ts_wind);
+           %  else
+           %      filteredOutput = lowpass(out(:,1:idxWind),3e-3,Ts_wind);
+           %  end
+           % 
+           %  [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),filteredOutput(end),prevPitCom,prevIntErr,Ts_wind);
+           %  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
            
            [uSeqFB(:,idxWind),intErr] = getPIcom(refWind(idxWind),measOutput,prevPitCom,prevIntErr,Ts_wind);
         end

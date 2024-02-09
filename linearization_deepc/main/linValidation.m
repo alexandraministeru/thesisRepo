@@ -23,13 +23,13 @@ outFileOP = '..\5MW_OC3Spar_DLL_WTurb_WavesIrr\5MW_OC3Spar_DLL_WTurb_WavesIrr_Mo
 % outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs3_tp12\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 
 % Turbulent wind, Hs=3, Tp=12
-% outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs3_tp12_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs3_tp12_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 
 % Steady wind, Hs=4.3, Tp=10
 % outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs4p3_tp10\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 
-% Turbulent wind, Hs=4.3, Tp=10
-outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs4p3_tp10_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
+% % Turbulent wind, Hs=4.3, Tp=10
+% outFile = '../5MW_OC3Spar_DLL_WTurb_WavesIrr_simWave\hs4p3_tp10_turbwind\5MW_OC3Spar_DLL_WTurb_WavesIrr.SFunc.out';
 
 %% Load linearization
 FilePath = "..\5MW_OC3Spar_DLL_WTurb_WavesIrr";
@@ -89,7 +89,7 @@ end
 
 %% Remove linearization point value from inputs
 % Get linearization point values from the original linearization file
-[dataOP, channelsOP, ~, ~] = ReadFASTtext(outFileOP);
+[dataOP, channelsOP, unitsOP, ~] = ReadFASTtext(outFileOP);
 
 % Time vector
 T_OP = dataOP(1:end,1);
@@ -140,6 +140,7 @@ x = zeros(length(XINIT),size(data,1)+1);
 
 %% Select plotting channels
 % Noninear plot channels
+% plotChannels = {'RotSpeed','PtfmPitch','GenPwr','TwrBsMyt','RotTorq','RootMyc1'};
 plotChannels = {'RotSpeed','PtfmPitch','TwrBsMyt'};
 % ,'BldPitch1','GenSpeed',
 
@@ -157,24 +158,66 @@ end
 
 %% Plot list of selected channels
 nPlots = length(plotChannels);
-figure()
+% fig=figure();
+% for ip = 1:nPlots
+%     % Find index of plot channel within data
+%     id = find(ismember(channels,plotChannels{ip}));
+%     idLin = find(ismember(channelsLin,plotChannelsLin{ip}));
+%     subplot(nPlots,1,ip)    
+%     plot(T, data(:,id),'k','LineWidth',1)
+%     hold on
+%     plot(T, Y(:,idLin) + opVal(ip),'r','LineWidth',1)
+%     xlabel('Time (in s)','Interpreter','latex')
+%     ylabel([channels{id} ' ' units{id}],'Interpreter','latex')
+%     xlim([500 1200])
+%     hold on    
+%     rmse(data(10000:end,id), Y(10000:end,idLin) + opVal(ip))
+%     vaf(data(10000:end,id), Y(10000:end,idLin) + opVal(ip)) 
+% end
+% ph1 = plot(nan, nan, 'k.', 'MarkerSize', 20);
+% ph2 = plot(nan, nan, 'r.', 'MarkerSize', 20);
+% hold off
+% leg = legend([ph1 ph2],{'Nonlinear model','Linearization'},'NumColumns',2,'Interpreter','latex','Location','south');
+% leg.ItemTokenSize = [10; 10];
+% grid on
+% set(gcf,'Color','White')
+
+% exportgraphics(fig,'Figures\linValidation_steady.pdf','Resolution',500)
+
+%%
+figure
+t = tiledlayout(nPlots,1,'TileSpacing','tight','Padding','none');
 for ip = 1:nPlots
-    % Find index of plot channel within data
+    nexttile
     id = find(ismember(channels,plotChannels{ip}));
     idLin = find(ismember(channelsLin,plotChannelsLin{ip}));
-    subplot(nPlots,1,ip)    
     plot(T, data(:,id),'k','LineWidth',1)
     hold on
     plot(T, Y(:,idLin) + opVal(ip),'r','LineWidth',1)
     xlabel('Time (in s)')
     ylabel([channels{id} ' ' units{id}])
-    xlim([500 1200])
-    legend('Nonlinear model','Linearization','Location','SouthEast')
+    xlim([500 1000])
     grid on
-    set(gcf,'Color','White')
-    rmse(data(10000:end,id), Y(10000:end,idLin) + opVal(ip))
-    vaf(data(10000:end,id), Y(10000:end,idLin) + opVal(ip)) 
+    eval(['axt' num2str(ip) ' = gca;'])
 end
+hold on
+ph1 = plot(nan, nan, 'k.', 'MarkerSize', 30);
+ph2 = plot(nan, nan, 'r.', 'MarkerSize', 30);
+hold off
+leg = legend([ph1 ph2],{'Nonlinear model','Linearization'},'NumColumns',2);
+leg.Layout.Tile = 'south';
+leg.ItemTokenSize = [20; 20];
+fontsize(leg,15,'points')
+set(gcf,'Color','White')
 
-%%
+% axt1.XTickLabels = {};
+% axt2.XTickLabels = {};
+% axt3.XTickLabels = {};
+% axt1.XLabel.String = '';
+% axt2.XLabel.String = '';
+% axt3.XLabel.String = '';
+
+exportgraphics(t,'D:\Master\TUD\Y2\Thesis\Report\Figures2\linearization\case3_noPadding.eps')
+
+
 
