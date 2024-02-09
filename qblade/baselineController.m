@@ -36,6 +36,11 @@ timeFull2 = zeros(simTime,3);
 
 rotSpeedStr = 'Rotational Speed [rpm]';
 pitchStr = 'Pitch Angle Blade 1 [deg]';
+'Gen. Elec. Power [kW]'
+'Y_l Mom. TWR pos 0.000 [Nm]'
+'Gen. HSS Torque [Nm]'
+'Aero. LSS Torque [Nm]'
+'Y_c RootBend. Mom. (OOP) BLD 1 [Nm]'
 
 waitBar = waitbar(0,'Preview buffer') ;
 

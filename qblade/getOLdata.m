@@ -62,14 +62,15 @@ tWind = 0:Ts_wt:(simTime-1)*Ts_wt;
 u_bladePitch = idinput(length(tWaves),'PRBS',[0 1/10],[-2 2]); % in degrees
 u_bladePitch = u_bladePitch + 11.6679; 
 
-% % % Generate horizontal wind speed disturbance input
-% u_windSpeed = 16 + 0.5.*randn(length(t),1);
+% % Generate horizontal wind speed disturbance input
+u_windSpeed = 16 + 0.5.*randn(length(tWind),1);
 
 ratedTq = 43093.55; % Nm
 
 rotSpeedStr = 'Rotational Speed [rpm]';
 pitchStr = 'Pitch Angle Blade 1 [deg]';
 mPitchStr = 'Y_g Mom. Diffraction [Nm]';
+ptfmPitchStr = 'NP Pitch Y_l [deg]';
 
 %% Reach steady-state
 kInit = 2000; % 100 seconds
@@ -77,6 +78,7 @@ mPitch_check = zeros(kInit,1);
 pitchCheck = zeros(kInit,1);
 V_hub_check = zeros(kInit,3);
 rotSpeed_check = zeros(kInit,1);
+ptfmPitch_check = zeros(kInit,1);
 waitBar = waitbar(0,'Reaching steady-state') ;
 
 % Reach a steady state first
@@ -85,6 +87,7 @@ for idxInit = 1:1:kInit
 
     % % Read pitch angle and horizontal wind speed at hub
     mPitch_check(idxInit) = calllib('QBladeDLL','getCustomData_at_num',mPitchStr, 0, 0) ;
+    ptfmPitch_check(idxInit) = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0) ;
     pitchCheck(idxInit,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);  
     V_hub_check(idxInit,:) = calllib('QBladeDLL','getWindspeed', 0, 0, 87.6, [0 0 0]);
     rotSpeed_check(idxInit,:) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0) ;    
@@ -105,6 +108,15 @@ grid on
 xlabel('Time (in s)')
 ylabel('Pitch angle (in deg)')
 title('Collective blade pitch')
+grid on
+set(gcf,'Color','White')
+
+figure()
+plot(tInit,ptfmPitch_check,'LineWidth',1)
+grid on
+xlabel('Time (in s)')
+ylabel('Platform pitch angle (in deg)')
+title('Platform pitch angle')
 grid on
 set(gcf,'Color','White')
 
@@ -140,16 +152,21 @@ set(gcf,'Color','White')
 kFinalWaves = simTime/Ts_ratio;
 rotSpeed = zeros(kFinalWaves,1);
 mPitch = zeros(kFinalWaves,1);
+ptfmPitch = zeros(kFinalWaves,1);
 pitch = zeros(kFinalWaves,1);
 pitchFull = zeros(simTime,1);
 V_hub = zeros(kFinalWaves,3);
 rotSpeedFull = zeros(simTime,1);
+ptfmPitchFull = zeros(simTime,1);
 waitBar = waitbar(0,'Initializing Simulation') ;
 
 idxWaves = 0;
 
 for idxWT = 1:1:simTime   
     calllib('QBladeDLL','advanceTurbineSimulation')
+
+    % % Set wind speed
+    % calllib('QBladeDLL','setPowerLawWind', u_windSpeed(idxWT), 0, 0, 0, 87.6);
 
     waveFlag = mod(idxWT-1,Ts_ratio);    
     
@@ -160,7 +177,8 @@ for idxWT = 1:1:simTime
         mPitch(idxWaves) = calllib('QBladeDLL','getCustomData_at_num',mPitchStr, 0, 0) ;
     
         % Get rotor speed and pitch angle
-        rotSpeed(idxWaves,:) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0) ;    
+        rotSpeed(idxWaves,:) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0) ;   
+        ptfmPitch(idxWaves,:) = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0) ;
         pitch(idxWaves,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);  
         V_hub(idxWaves,:) = calllib('QBladeDLL','getWindspeed', 0, 0, 87.6, [0 0 0]);
 
@@ -171,13 +189,15 @@ for idxWT = 1:1:simTime
     end
     rotSpeedFull(idxWT,:) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0) ;
     pitchFull(idxWT,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);  
+    ptfmPitchFull(idxWT,:) = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0);  
     waitbar(idxWT/simTime,waitBar,'Simulation Running')
 end
 close(waitBar)
 calllib('QBladeDLL','closeInstance')
 
 % Add measurement noise
-Std = 5e-5; % measurement noise standard deviation
+% Std = 5e-5; % measurement noise standard deviation
+Std = 1e-4; % measurement noise standard deviation
 rotSpeed = rotSpeed + Std.*randn(size(rotSpeed));
 
 %%
@@ -210,6 +230,13 @@ ylabel(mPitchStr)
 set(gcf,'Color','White')
 
 figure
+plot(tWaves,ptfmPitch)
+grid on
+xlabel('Time (in s)')
+ylabel('Horizontal wind speed')
+set(gcf,'Color','White')
+
+figure
 plot(tWaves,V_hub(:,1))
 grid on
 xlim('tight')
@@ -239,14 +266,26 @@ legend('Pitch angle','Location','southeast')
 set(gcf,'Color','White')
 hold on
 
+figure
+plot(0:Ts_wt:(simTime-1)*Ts_wt,ptfmPitchFull)
+grid on
+xlabel('Time (in s)')
+ylabel('Platform pich angle real samples(in deg)')
+xlim('tight')
+legend('Pitch angle','Location','southeast')
+set(gcf,'Color','White')
+hold on
+
 %%
-% u = pitch; % (100:end);
-% y = rotSpeed; % (100:end);
-% w = mPitch; % (100:end);
+u = pitch; % (100:end);
+y = [rotSpeed ptfmPitch]; % (100:end);
+% w = [V_hub(:,1) mPitch]; % (100:end);
+
+w = mPitch; % (100:end);
+
+save('inputData\OLdata_steadyWind_irrWaves_full_1e-4.mat','u','y','w')
+
 % 
-% save('inputData\OLdata_steadyWind_irrWaves2.mat','u','y','w')
-
-
-% save('inputData\OLdata_steadyWind_irrWaves2_plotting.mat','tWind','tWaves',...
+% save('inputData\OLdata_steadyWind_irrWaves_fullSys.mat','tWind','tWaves',...
 %     'mPitch_check','rotSpeed_check','rotSpeedFull','pitchFull',...
 %     'u_bladePitch','Std')

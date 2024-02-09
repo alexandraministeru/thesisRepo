@@ -38,7 +38,7 @@ yini = data.yini;
 pIn = size(Up,1);
 pOut = size(Yp,1);
 fIn = size(Uf,1);
-% fOut = size(Yf,1);
+fOut = size(Yf,1);
 
 if previewFlag == 1
     Wp = data.Wp;
@@ -103,25 +103,35 @@ if method == 1 || method == 2  % QP or SDP
     Aineq = [zeros(size(A,1),length(g)) A;
          zeros(size(A,1),length(g)) -A];
      
-    bineq = [b(1) + data.uini(end); %TBD MIMO
-            b(2:end);
-            b(1) - data.uini(end);
-            b(2:end)];   
+    bineq = [b(1:nInputs) + data.uini(end-nInputs+1:end); 
+            b(nInputs+1:end);
+            b(1:nInputs) - data.uini(end-nInputs+1:end);
+            b(nInputs+1:end);];   
 
     % Input constraints
     A_lbu = -[zeros(fIn,length(g)) eye(fIn)];
     A_ubu = [zeros(fIn,length(g)) eye(fIn)];
 
+    A_lby = -[Yf*Z' zeros(fOut,fIn)];
+    A_uby = [Yf*Z' zeros(fOut,fIn)];
+
     Aineq = [Aineq;
              A_lbu;
-             A_ubu];
+             A_ubu;
+             A_lby;
+             A_uby];
 
     b_lbu = -kron(ones(f,1), controlParams.lbu);
     b_ubu = kron(ones(f,1), controlParams.ubu);
 
+    b_lby = -kron(ones(f,1), controlParams.lby);
+    b_uby = kron(ones(f,1), controlParams.uby);
+
     bineq = [bineq;
              b_lbu;
-             b_ubu]; 
+             b_ubu;
+             b_lby;
+             b_uby]; 
 
     if method == 1 % QP
 
@@ -136,8 +146,8 @@ if method == 1 || method == 2  % QP or SDP
     % HnSp = (null(Aeq)).'*H*null(Aeq);
     % posdef = min(real(eig(HnSp)))>=0
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    n = length(z0);
+    % 
+    % n = length(z0);
     % z = optimvar('z',n);    
     % objFcn = (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
     %     z(length(g)+1:end)'*R*z(length(g)+1:end);
@@ -147,8 +157,8 @@ if method == 1 || method == 2  % QP or SDP
     % constr.ineq = Aineq*z <= bineq;   
     % qprob.Constraints = constr;
     % 
-    % opts = optimoptions('quadprog','Algorithm','active-set','Display','iter');
-    % % opts = optimoptions('quadprog','Algorithm','interior-point-convex','Display','iter');
+    % opts = optimoptions('quadprog','Algorithm','active-set');
+    % % opts = optimoptions('quadprog','Algorithm','interior-point-convex');
     % initPoint = struct('z',z0);
     % [sol,~,~,~] = solve(qprob,initPoint,'options',opts);
     % z = sol.z;
@@ -180,14 +190,14 @@ if method == 1 || method == 2  % QP or SDP
     % z = value(x);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-     %%%%%%%%%%%%%%%%%%%%%%%%%%%% fmincon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %  %%%%%%%%%%%%%%%%%%%%%%%%%%%% fmincon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     objFcn = @(z) (Yf*Z'*z(1:length(g))-rf)'*Q*(Yf*Z'*z(1:length(g))-rf) + ...
         z(length(g)+1:end)'*R*z(length(g)+1:end);
 
     options = optimoptions('fmincon','Algorithm','sqp','Display','iter-detailed');%,'UseParallel',true);
-    % z = fmincon(objFcn,z0,[],[],Aeq,beq,[],[],[],options);
-    z = fmincon(objFcn,z0,Aineq,bineq,Aeq,beq,[],[],[],options);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    z = fmincon(objFcn,z0,[],[],Aeq,beq,[],[],[],options);
+    % z = fmincon(objFcn,z0,Aineq,bineq,Aeq,beq,[],[],[],options);
+    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
     elseif method == 2 % SDP
     H1 = Z*Yf.'*Q.^(1/2); % force H symmetric
@@ -287,6 +297,7 @@ end
 % g = z(1:size(Z,1));
 uf = z(size(Z,1)+1:end);
 uOpt = uf(1:nInputs);
+% uOpt = uf(1:2*nInputs);
 
 end
 

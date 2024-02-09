@@ -27,57 +27,76 @@ simName = 'D:\Program Files\QBladeCE_2.0.6.4_win\QBladeCE_2.0.6.4\SampleProjects
 calllib('QBladeDLL','loadSimDefinition',simName)
 calllib('QBladeDLL','initializeSimulation')
 Ts = 0.05;
-f = 10;
-simTime = 1000;
-t = 0:Ts:(simTime-1)*Ts;
+f = 20;
+% simTime = 2000;
+% t = 0:Ts:(simTime-1)*Ts;
+% 
+% mPitchPreview = zeros(f*20,1);
+% mPitch = zeros(f*20,1);
+% timeDebug = zeros(simTime,1);
+% waitBar = waitbar(0,'Preview buffer') ;
+% 
+% mPitchPreview = zeros(simTime+400,1);
+% mPitch = zeros(simTime,1);
+% 
+% for kBuffer = 1:1:400
+%     calllib('QBladeDLL','advanceTurbineSimulation')
+%     calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0)
+% 
+%     disp('Getting preview')
+%     idxPreview = kBuffer;
+%     mPitchPreview(idxPreview) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
+% 
+%     waitbar(kBuffer/400,waitBar,'Getting preview data')
+% 
+% end
+% 
+% for idx = 1:1:simTime
+%     calllib('QBladeDLL','advanceTurbineSimulation')
+%     calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0)
+% 
+%     timeDebug(idx) = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
+%     mPitch(idx) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction [Nm]', 0, 0);
+%     mPitchPreview(idxPreview+idx) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
+%     waitbar(idx/simTime,waitBar,'Getting measurement data')
+% 
+% end
+% 
+% calllib('QBladeDLL','closeInstance')
+% close(waitBar)
+% 
+% figure
+% plot(timeDebug,mPitchPreview(401:end),LineWidth=1)
+% hold on
+% plot(timeDebug,mPitch,LineWidth=1)
+% grid on
+% xlabel('Time (in s)')
+% ylabel('Platform pitch moment (in Nm)')
+% legend('Preview','Measurement','Location','southeast')
+% set(gcf,'Color','White')
+% 
+% rmse(mPitch,mPitchPreview(401:end))
+% diff10 = mPitchPreview(401:end)-mPitch;
+% norm(diff10)
+% 
+% timeDebugP = 0:0.05:simTime*Ts-Ts;
 
-mPitchPreview = zeros(f*20,1);
-mPitch = zeros(f*20,1);
-timeDebug = zeros(f*20,1);
+%%
+simTime = 16000;
+t = 0:Ts:(simTime-1)*Ts;
+mPitch = zeros(simTime,1);
 waitBar = waitbar(0,'Preview buffer') ;
 
-for kBuffer = 1:1:(f*20)
+for idx = 1:1:simTime
+    idx
     calllib('QBladeDLL','advanceTurbineSimulation')
-    calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0)
-
-    % if mod(kBuffer-1, 20) == 0
-        disp('Getting preview')
-        idxPreview = kBuffer;%floor(kBuffer/20) + 1;
-        mPitchPreview(idxPreview) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
-    % end
-
-    waitbar(kBuffer/400,waitBar,'Getting preview data')
-
-end
-
-for idx = 1:1:f*20
-    calllib('QBladeDLL','advanceTurbineSimulation')
-    calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0)
-
-    % if mod(idx-1, 20) == 0  
-        disp('Reading val')
-        idxWaves = idx;%floor(idx/20) + 1;
-        timeDebug(idxWaves) = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
-        mPitch(idxWaves) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction [Nm]', 0, 0);
-    % end
-
-    waitbar(idx/400,waitBar,'Getting measurement data')
+    mPitch(idx) = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction [Nm]', 0, 0);
+    waitbar(idx/simTime,waitBar,'Getting measurement data')
 
 end
 
 calllib('QBladeDLL','closeInstance')
 close(waitBar)
 
-figure
-plot(timeDebug,mPitchPreview,LineWidth=1)
-hold on
-plot(timeDebug,mPitch,LineWidth=1)
-grid on
-xlabel('Time (in s)')
-ylabel('Platform pitch moment (in Nm)')
-legend('Preview','Measurement','Location','southeast')
-set(gcf,'Color','White')
+save('inputData\waveData_long.mat')
 
-diff10 = mPitchPreview-mPitch;
-norm(diff20)
-norm(diff10)

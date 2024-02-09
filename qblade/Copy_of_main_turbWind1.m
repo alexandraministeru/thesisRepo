@@ -44,11 +44,13 @@ end
 clearvars;
 % load('inputData\OLdata_steadyWind_irrWaves.mat')
 load('inputData\OLdata_steadyWind_irrWaves_full.mat')
+load('inputData\OLdata_wind_irrWaves_full.mat')
 
 in1 = u;
 out1 = y(:,1);
 out2 = y(:,2);
-dist1 = w;
+dist1 = w(:,1);
+dist2 = w(:,2);
 
 %% Load wave data
 % load('inputData\waveData.mat')
@@ -75,12 +77,15 @@ yhat1 = out1 - mean_rotSpeed;
 mean_ptfmPitch = mean(out2);
 yhat2 = out2 - mean_ptfmPitch;
 
-mPitchHat = dist1; % already centered around 0
+mean_windSpeed = mean(dist1);
+u_windSpeedHat = dist1 - mean_windSpeed;
+
+mPitchHat = dist2; % already centered around 0
 
 %% Scaling
 % Scaling factors
 uhat_max = 5; % Maximum expected input (deg)
-% v0hat_max = 0.1*16; % Maximum expected wind disturbance (m/s)
+v0hat_max = 0.1*16; % Maximum expected wind disturbance (m/s)
 mPitchHat_max = max(abs(mPitchHat)); % Maximum expected wave pitch moment (Nm)
 omegaHat_max = 0.1* 12.1; % Maximum expected generator speed error (30% around steady-state value) (rpm)
 pltfmPitchHat_max = 1.5; % Maximum expected platform pitch angle (deg)
@@ -88,11 +93,12 @@ pltfmPitchHat_max = 1.5; % Maximum expected platform pitch angle (deg)
 % Signal scaling
 u = uhat./uhat_max;
 mPitch = mPitchHat./mPitchHat_max;
-% waveData = waveData./mPitchHat_max;
 y1 = yhat1./omegaHat_max;
 y2 = yhat2./pltfmPitchHat_max;
+u_windSpeed = u_windSpeedHat./v0hat_max;
 
 y = [y1 y2];
+disturbMat = [u_windSpeed mPitch];
 
 %% Construct data matrices
 % Use preview information?
@@ -118,8 +124,6 @@ data.Yp = constructHankelMat(y,i,p,Nbar);
 % Future data
 data.Uf = constructHankelMat(u,i+p,f,Nbar);
 data.Yf = constructHankelMat(y,i+p,f,Nbar);
-
-disturbMat = mPitch;
 
 if previewFlag == 1
     data.Wp = constructHankelMat(disturbMat,i,p,Nbar); % past data
@@ -194,12 +198,12 @@ controlParams.Q = kron(eye(f),weightOutputs);
 weightInputs= 1e-1*diag(1); % preview
 controlParams.R = kron(eye(f),weightInputs);
 
-controlParams.lam_y = 1e3;
-controlParams.lam_w = 1e3;
+controlParams.lam_y = 0;
+controlParams.lam_w = 0;
 
 % Choose input bounds
-bladePitch_min = 7;
-bladePitch_max = 17;
+bladePitch_min = 4;
+bladePitch_max = 19;
 controlParams.lbu = (bladePitch_min - mean_bladePitch)./uhat_max; % deg
 controlParams.ubu = (bladePitch_max - mean_bladePitch)./uhat_max;
 
@@ -209,9 +213,9 @@ duDeg = duDeg./uhat_max;
 controlParams.duf = duDeg*Ts_waves;
 
 % Output bounds
-controlParams.lby = [-10; -0.5]; % rpm, degrees 
+controlParams.lby = [-10; -0.75]; % rpm, degrees 
 controlParams.lby = controlParams.lby./[omegaHat_max; pltfmPitchHat_max];
-controlParams.uby = [10; 0.5];
+controlParams.uby = [10; 0.75];
 controlParams.uby = controlParams.uby./[omegaHat_max; pltfmPitchHat_max];
 
 % Measurement noise standard deviation
@@ -242,19 +246,33 @@ wt_out = zeros(nOutputs,kFinalWaves);
 pitch_sim = zeros(kFinalWaves,3);
 V_hub = zeros(kFinalWaves,3);
 mPitchPreview = zeros(controlParams.f,1);
+vPreview = zeros(controlParams.f,1);
 
-rotSpeedFull = zeros(kFinal,1);
-pitchFull = zeros(kFinal,3);
-timeFull = zeros(kFinal,1);
-ptfmPitchFull = zeros(kFinal,1);
+rotSpeedFull    = zeros(kFinal,1);
+pitchFull       = zeros(kFinal,3);
+timeFull        = zeros(kFinal,1);
+ptfmPitchFull   = zeros(kFinal,1);
+genPwrFull      = zeros(kFinal,1);
+MytFull         = zeros(kFinal,1);
+lssT            = zeros(kFinal,1);
+Moop            = zeros(kFinal,1);
 
-data.wf = zeros(controlParams.f,1);
+data.wf = zeros(nDist*controlParams.f,1);
+
+% Turbulent wind:n
+load('inputData\turbWind_16mps_long.mat')
+v = turbWind;
+
 
 %% Reach steady state
 waitBar = waitbar(0,'Reaching steady-state') ;
 
 for kSS = 1:1:1000
     calllib('QBladeDLL','advanceTurbineSimulation')
+
+    % Set wind speed
+    calllib('QBladeDLL','setPowerLawWind', v(kSS), 0, 0, 0, 87.6);
+
     theta_c = mean_bladePitch;
     calllib('QBladeDLL','setControlVars_at_num',[ratedTq 0 theta_c theta_c theta_c],0);   
 
@@ -271,10 +289,15 @@ bp = zeros(controlParams.f*Ts_ratio,1);
 for kBuffer = 1:1:(controlParams.f*Ts_ratio)
     calllib('QBladeDLL','advanceTurbineSimulation')
 
+    % Set wind speed
+    calllib('QBladeDLL','setPowerLawWind', v(kSS+kBuffer), 0, 0, 0, 87.6);
+
     if mod(kBuffer-1, Ts_ratio) == 0
         idxPreview = floor(kBuffer/Ts_ratio) + 1;
         mPitchPreview_temp = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
         mPitchPreview(idxPreview) = mPitchPreview_temp/mPitchHat_max;
+
+        vPreview(idxPreview) = (v(kSS+kBuffer+400)-mean_windSpeed)./v0hat_max;
 
         % Initialize trajectories for DeePC
         bp = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
@@ -294,14 +317,16 @@ for kBuffer = 1:1:(controlParams.f*Ts_ratio)
         if previewFlag == 1
             mPitch_temp = calllib('QBladeDLL','getCustomData_at_num',mPitchStr, 0, 0) ;
             mPitch_temp = mPitch_temp./mPitchHat_max;
-            data.wini = [data.wini(nDist+1:end); mPitch_temp];
+            v_temp = (v(kSS+kBuffer)-mean_windSpeed)./v0hat_max;
+            data.wini = [data.wini(nDist+1:end); v_temp; mPitch_temp];
         end    
     end
     waitbar(kBuffer/((controlParams.f-1)*Ts_ratio),waitBar,'Getting preview data')
 end
 close(waitBar)
 
-data.wf = mPitchPreview;
+previewData = [vPreview mPitchPreview];
+data.wf = reshape(previewData',[],1);
 
 %% Start control
 waitBar = waitbar(0,'Initializing Simulation') ;
@@ -313,8 +338,15 @@ for k = 1:1:kFinal
         idxWaves = floor(k/Ts_ratio) + 1;        
         
         calllib('QBladeDLL','advanceTurbineSimulation')
+         % Set wind speed
+        calllib('QBladeDLL','setPowerLawWind', v(kSS+kBuffer+k), 0, 0, 0, 87.6);
 
         % Get rotor speed
+        genPwrFull(k)     = calllib('QBladeDLL','getCustomData_at_num','Gen. Elec. Power [kW]', 0, 0);
+        MytFull(k)        = calllib('QBladeDLL','getCustomData_at_num','Y_l Mom. TWR pos 0.000 [Nm]', 0, 0);
+        lssT(k)           = calllib('QBladeDLL','getCustomData_at_num','Aero. LSS Torque [Nm]', 0, 0);
+        Moop(k)           = calllib('QBladeDLL','getCustomData_at_num','Y_c RootBend. Mom. (OOP) BLD 1 [Nm]', 0, 0);
+
         wt_out(1,idxWaves) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
         rotSpeedFull(k) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
         wt_out(1,idxWaves) = wt_out(1,idxWaves) + Std.*randn(size(wt_out(1,idxWaves)));
@@ -334,13 +366,14 @@ for k = 1:1:kFinal
         if previewFlag == 1
             mPitchOffset = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
             mPitchOffset = mPitchOffset/mPitchHat_max;
-            data.wf = [data.wf(nDist+1:end); mPitchOffset];
+            vOffset = (v(kSS+kBuffer+k+400)-mean_windSpeed)/v0hat_max;
+            data.wf = [data.wf(nDist+1:end); vOffset; mPitchOffset];
         else
             data.wf = [];
         end
 
         % DeePC optimal control input        
-        uStar = deepc2(data,rf,controlParams,method,ivFlag,previewFlag); 
+        uStar = deepc_outp(data,rf,controlParams,method,ivFlag,previewFlag); 
         uSeq(:,idxWaves) = uStar*uhat_max + mean_bladePitch;
 
         % Set collective blade pitch
@@ -348,22 +381,35 @@ for k = 1:1:kFinal
         calllib('QBladeDLL','setControlVars_at_num',[ratedTq 0 theta_c theta_c theta_c],0);
 
         pitch_sim(idxWaves,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
+        pitchFull(k,:)    = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
 
         % Get wave forces
         mPitchHat_sim = calllib('QBladeDLL','getCustomData_at_num',mPitchStr, 0, 0) ;
         mPitch_sim = mPitchHat_sim./mPitchHat_max;
 
+        V_hub = calllib('QBladeDLL','getWindspeed', 0, 0, 87.6, [0 0 0]);
+        V_hub = (V_hub-mean_windSpeed)./v0hat_max;
+
         data.uini = [data.uini(nInputs+1:end); uStar];        
         if previewFlag == 1
-            data.wini = [data.wini(nDist+1:end); mPitch_sim];
+            data.wini = [data.wini(nDist+1:end); V_hub(1); mPitch_sim];
         end        
     else
         calllib('QBladeDLL','advanceTurbineSimulation')
+        % Set wind speed
+        calllib('QBladeDLL','setPowerLawWind', v(kSS+kBuffer+k), 0, 0, 0, 87.6);
+
         calllib('QBladeDLL','setControlVars_at_num',[ratedTq 0 theta_c theta_c theta_c],0);
-        rotSpeedFull(k) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
-        ptfmPitchFull(k) = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0);
-        pitchFull(k,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
-        timeFull(k) = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
+
+        rotSpeedFull(k)   = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
+        ptfmPitchFull(k)  = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0);
+        pitchFull(k,:)    = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
+        timeFull(k)       = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
+        genPwrFull(k)     = calllib('QBladeDLL','getCustomData_at_num','Gen. Elec. Power [kW]', 0, 0);
+        MytFull(k)        = calllib('QBladeDLL','getCustomData_at_num','Y_l Mom. TWR pos 0.000 [Nm]', 0, 0);
+        lssT(k)           = calllib('QBladeDLL','getCustomData_at_num','Aero. LSS Torque [Nm]', 0, 0);
+        Moop(k)           = calllib('QBladeDLL','getCustomData_at_num','Y_c RootBend. Mom. (OOP) BLD 1 [Nm]', 0, 0);
+
     end
 
     waitbar(k/kFinal,waitBar,'Simulation Running')
@@ -442,3 +488,4 @@ set(gcf,'Color','White')
 % savefig(flip(h),'figures\wind_preview.fig')
 
 % save('outputData\previewDeePC.mat','rotSpeedFull','timeFull','pitchFull');
+% save('outputDataFinal\turb_deepc1.mat')

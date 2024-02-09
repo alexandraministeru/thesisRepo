@@ -44,6 +44,7 @@ end
 clearvars;
 % load('inputData\OLdata_steadyWind_irrWaves.mat')
 load('inputData\OLdata_steadyWind_irrWaves_full.mat')
+% load('inputData\OLdata_wind_irrWaves_full.mat')
 
 in1 = u;
 out1 = y(:,1);
@@ -51,8 +52,8 @@ out2 = y(:,2);
 dist1 = w;
 
 %% Load wave data
-% load('inputData\waveData.mat')
-% waveData = mPitch(1:20:end);
+load('inputData\waveData_long.mat')
+waveData = mPitch(1:20:end);
 
 %% DeePC parameters
 N = 500; % lenght of data set
@@ -88,7 +89,7 @@ pltfmPitchHat_max = 1.5; % Maximum expected platform pitch angle (deg)
 % Signal scaling
 u = uhat./uhat_max;
 mPitch = mPitchHat./mPitchHat_max;
-% waveData = waveData./mPitchHat_max;
+waveData = waveData./mPitchHat_max;
 y1 = yhat1./omegaHat_max;
 y2 = yhat2./pltfmPitchHat_max;
 
@@ -155,7 +156,8 @@ elseif strcmp(ivAns,'n')
 end
 
 %% Set up control loop
-kFinal = 2000; % simulation steps
+kFinal = 4000; % simulation steps
+% kFinal = 15600; % simulation steps
 Ts = 0.05;
 Ts_waves = 1;
 Ts_ratio = Ts_waves/Ts;
@@ -191,7 +193,7 @@ controlParams.Q = kron(eye(f),weightOutputs);
 % input channels and the n-th element on the diagonal represents the weight
 % for the corresponding n-th input
 % weightInputs= 1e-3*diag(1); % no preview
-weightInputs= 1e-1*diag(1); % preview
+weightInputs= 10;%1e-1*diag(1); % preview
 controlParams.R = kron(eye(f),weightInputs);
 
 controlParams.lam_y = 1e3;
@@ -209,9 +211,9 @@ duDeg = duDeg./uhat_max;
 controlParams.duf = duDeg*Ts_waves;
 
 % Output bounds
-controlParams.lby = [-10; -0.5]; % rpm, degrees 
+controlParams.lby = [-10; -0.25]; % rpm, degrees 
 controlParams.lby = controlParams.lby./[omegaHat_max; pltfmPitchHat_max];
-controlParams.uby = [10; 0.5];
+controlParams.uby = [10; 0.25];
 controlParams.uby = controlParams.uby./[omegaHat_max; pltfmPitchHat_max];
 
 % Measurement noise standard deviation
@@ -243,10 +245,14 @@ pitch_sim = zeros(kFinalWaves,3);
 V_hub = zeros(kFinalWaves,3);
 mPitchPreview = zeros(controlParams.f,1);
 
-rotSpeedFull = zeros(kFinal,1);
-pitchFull = zeros(kFinal,3);
-timeFull = zeros(kFinal,1);
-ptfmPitchFull = zeros(kFinal,1);
+rotSpeedFull    = zeros(kFinal,1);
+pitchFull       = zeros(kFinal,3);
+timeFull        = zeros(kFinal,1);
+ptfmPitchFull   = zeros(kFinal,1);
+genPwrFull      = zeros(kFinal,1);
+MytFull         = zeros(kFinal,1);
+lssT            = zeros(kFinal,1);
+Moop            = zeros(kFinal,1);
 
 data.wf = zeros(controlParams.f,1);
 
@@ -274,7 +280,8 @@ for kBuffer = 1:1:(controlParams.f*Ts_ratio)
     if mod(kBuffer-1, Ts_ratio) == 0
         idxPreview = floor(kBuffer/Ts_ratio) + 1;
         mPitchPreview_temp = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
-        mPitchPreview(idxPreview) = mPitchPreview_temp/mPitchHat_max;
+        % mPitchPreview(idxPreview) = mPitchPreview_temp/mPitchHat_max;
+        mPitchPreview(idxPreview) = waveData(50+idxPreview+20);
 
         % Initialize trajectories for DeePC
         bp = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
@@ -315,6 +322,11 @@ for k = 1:1:kFinal
         calllib('QBladeDLL','advanceTurbineSimulation')
 
         % Get rotor speed
+        genPwrFull(k)     = calllib('QBladeDLL','getCustomData_at_num','Gen. Elec. Power [kW]', 0, 0);
+        MytFull(k)        = calllib('QBladeDLL','getCustomData_at_num','Y_l Mom. TWR pos 0.000 [Nm]', 0, 0);
+        lssT(k)           = calllib('QBladeDLL','getCustomData_at_num','Aero. LSS Torque [Nm]', 0, 0);
+        Moop(k)           = calllib('QBladeDLL','getCustomData_at_num','Y_c RootBend. Mom. (OOP) BLD 1 [Nm]', 0, 0);
+
         wt_out(1,idxWaves) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
         rotSpeedFull(k) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
         wt_out(1,idxWaves) = wt_out(1,idxWaves) + Std.*randn(size(wt_out(1,idxWaves)));
@@ -333,14 +345,15 @@ for k = 1:1:kFinal
         % Get preview
         if previewFlag == 1
             mPitchOffset = calllib('QBladeDLL','getCustomData_at_num','Y_g Mom. Diffraction Offset [Nm]', 0, 0);
-            mPitchOffset = mPitchOffset/mPitchHat_max;
+            % mPitchOffset = mPitchOffset/mPitchHat_max;
+            mPitchOffset = waveData(70+idxWaves+20);
             data.wf = [data.wf(nDist+1:end); mPitchOffset];
         else
             data.wf = [];
         end
 
         % DeePC optimal control input        
-        uStar = deepc2(data,rf,controlParams,method,ivFlag,previewFlag); 
+        uStar = deepc(data,rf,controlParams,method,ivFlag,previewFlag); 
         uSeq(:,idxWaves) = uStar*uhat_max + mean_bladePitch;
 
         % Set collective blade pitch
@@ -360,10 +373,16 @@ for k = 1:1:kFinal
     else
         calllib('QBladeDLL','advanceTurbineSimulation')
         calllib('QBladeDLL','setControlVars_at_num',[ratedTq 0 theta_c theta_c theta_c],0);
-        rotSpeedFull(k) = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
-        ptfmPitchFull(k) = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0);
-        pitchFull(k,:) = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
-        timeFull(k) = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
+
+        rotSpeedFull(k)   = calllib('QBladeDLL','getCustomData_at_num',rotSpeedStr, 0, 0);
+        ptfmPitchFull(k)  = calllib('QBladeDLL','getCustomData_at_num',ptfmPitchStr, 0, 0);
+        pitchFull(k,:)    = calllib('QBladeDLL','getCustomData_at_num',pitchStr, 0, 0);
+        timeFull(k)       = calllib('QBladeDLL','getCustomData_at_num','Time [s]',0,0);
+        genPwrFull(k)     = calllib('QBladeDLL','getCustomData_at_num','Gen. Elec. Power [kW]', 0, 0);
+        MytFull(k)        = calllib('QBladeDLL','getCustomData_at_num','Y_l Mom. TWR pos 0.000 [Nm]', 0, 0);
+        lssT(k)           = calllib('QBladeDLL','getCustomData_at_num','Aero. LSS Torque [Nm]', 0, 0);
+        Moop(k)           = calllib('QBladeDLL','getCustomData_at_num','Y_c RootBend. Mom. (OOP) BLD 1 [Nm]', 0, 0);
+
     end
 
     waitbar(k/kFinal,waitBar,'Simulation Running')
@@ -442,3 +461,4 @@ set(gcf,'Color','White')
 % savefig(flip(h),'figures\wind_preview.fig')
 
 % save('outputData\previewDeePC.mat','rotSpeedFull','timeFull','pitchFull');
+% save('outputDataFinal\deepc1.mat')
